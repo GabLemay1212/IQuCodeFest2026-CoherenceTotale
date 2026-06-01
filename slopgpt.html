@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SlopGPT</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #FAF9F6;
+    --sidebar-bg: #F0EEE9;
+    --surface: #FFFFFF;
+    --border: rgba(0,0,0,0.08);
+    --border-md: rgba(0,0,0,0.14);
+    --text-primary: #1A1918;
+    --text-secondary: #6B6860;
+    --text-muted: #9C9A94;
+    --accent: #D97706;
+    --accent-hover: #B45309;
+    --user-bubble: #FFFBF2;
+    --user-border: #F5E6C8;
+    --input-bg: #FFFFFF;
+    --scrollbar: rgba(0,0,0,0.1);
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --sidebar-w: 260px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1C1B19;
+      --sidebar-bg: #141413;
+      --surface: #242320;
+      --border: rgba(255,255,255,0.07);
+      --border-md: rgba(255,255,255,0.12);
+      --text-primary: #EDE9E0;
+      --text-secondary: #9C9A94;
+      --text-muted: #6B6860;
+      --user-bubble: #2A2720;
+      --user-border: #3D3829;
+      --input-bg: #2A2720;
+      --scrollbar: rgba(255,255,255,0.1);
+    }
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text-primary);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+  }
+
+  .sidebar-header {
+    padding: 18px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .slop-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .logo-icon {
+    width: 26px;
+    height: 26px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+  }
+
+  .new-chat-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .new-chat-btn:hover { background: var(--border); color: var(--text-primary); }
+
+  .sidebar-section {
+    padding: 8px 10px 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+  }
+
+  .chat-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 8px 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+  }
+
+  .chat-item {
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    margin-bottom: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chat-item-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chat-item-delete {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+  }
+  .chat-item:hover .chat-item-delete,
+  .chat-item.active .chat-item-delete { display: flex; }
+  .chat-item-delete:hover { background: var(--border); color: var(--text-primary); }
+
+  .chat-item:hover { background: var(--border); color: var(--text-primary); }
+  .chat-item.active { background: var(--surface); color: var(--text-primary); }
+
+  .sidebar-footer {
+    padding: 12px 8px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    margin: 4px;
+    transition: background 0.12s;
+  }
+
+  .sidebar-footer:hover { background: var(--border); }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D97706, #92400E);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .user-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+  .user-plan { font-size: 11px; color: var(--text-muted); }
+
+  /* ── Main chat area ── */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Top bar ── */
+  #topbar {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  .model-selector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-primary);
+    background: none;
+    border: 1px solid var(--border-md);
+    padding: 5px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+
+  .model-selector:hover { background: var(--border); }
+
+  .topbar-actions { display: flex; gap: 6px; }
+
+  .topbar-btn {
+    background: none;
+    border: 1px solid var(--border-md);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background 0.12s, color 0.12s;
+  }
+
+  .topbar-btn:hover { background: var(--border); color: var(--text-primary); }
+
+  /* ── Messages ── */
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 0;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+  }
+
+  .msg-wrapper {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .message {
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    animation: fadeUp 0.2s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user { align-items: flex-end; }
+  .message.assistant { align-items: flex-start; }
+
+  .msg-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .msg-label .dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: white;
+    font-weight: 600;
+  }
+
+  .msg-content {
+    font-family: var(--font-serif);
+    font-size: 15.5px;
+    line-height: 1.75;
+    color: var(--text-primary);
+    max-width: 100%;
+  }
+
+  .message.user .msg-content {
+    background: var(--user-bubble);
+    border: 1px solid var(--user-border);
+    border-radius: var(--radius) var(--radius) 4px var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-sans);
+    font-size: 14.5px;
+  }
+
+  .message.assistant .msg-content {
+    width: 100%;
+  }
+
+  /* Image response */
+  .response-image {
+    max-width: 100%;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-md);
+    margin-top: 8px;
+    display: block;
+  }
+
+  .image-error {
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    color: #DC2626;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    font-family: var(--font-sans);
+  }
+
+  .msg-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .message:hover .msg-actions { opacity: 1; }
+
+  .msg-action-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.12s, color 0.12s;
+  }
+
+  .msg-action-btn:hover { background: var(--border); color: var(--text-secondary); }
+
+  /* ── Empty state ── */
+  #empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+  }
+
+  .empty-logo {
+    width: 48px;
+    height: 48px;
+    background: var(--accent);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 500;
+    color: white;
+    margin-bottom: 20px;
+  }
+
+  .empty-title {
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  .empty-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    max-width: 340px;
+    line-height: 1.6;
+  }
+
+  .suggestions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 32px;
+    max-width: 500px;
+    width: 100%;
+  }
+
+  .suggestion {
+    background: var(--surface);
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-sans);
+    line-height: 1.5;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+
+  .suggestion:hover {
+    background: var(--border);
+    border-color: var(--border-md);
+    color: var(--text-primary);
+  }
+
+  /* ── Input area ── */
+  #input-area {
+    padding: 16px 24px 20px;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  .input-container {
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--input-bg);
+    border: 1px solid var(--border-md);
+    border-radius: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    transition: box-shadow 0.15s, border-color 0.15s;
+    overflow: hidden;
+  }
+
+  .input-container:focus-within {
+    border-color: rgba(217,119,6,0.5);
+    box-shadow: 0 0 0 3px rgba(217,119,6,0.1);
+  }
+
+  #prompt-input {
+    width: 100%;
+    background: none;
+    border: none;
+    outline: none;
+    padding: 14px 16px 6px;
+    font-size: 15px;
+    font-family: var(--font-sans);
+    color: var(--text-primary);
+    resize: none;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.55;
+    scrollbar-width: thin;
+  }
+
+  #prompt-input::placeholder { color: var(--text-muted); }
+
+  .input-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px 10px;
+  }
+
+  .input-tools { display: flex; gap: 2px; }
+
+  .tool-btn {
+    background: none;
+    border: none;
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-sans);
+    transition: background 0.12s, color 0.12s;
+  }
+
+  .tool-btn:hover { background: var(--border); color: var(--text-secondary); }
+
+  .send-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.1s, opacity 0.15s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover { background: var(--accent-hover); }
+  .send-btn:active { transform: scale(0.94); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .send-btn svg { color: white; }
+
+  .input-footer {
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── Loading indicator ── */
+  .thinking {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    font-family: var(--font-sans);
+  }
+
+  .thinking-dots { display: flex; gap: 4px; }
+
+  .thinking-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.4s ease infinite;
+  }
+
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1.1); }
+  }
+
+  /* ── Status bar ── */
+  #status-bar {
+    max-width: 720px;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 0 4px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22C55E;
+    flex-shrink: 0;
+  }
+
+  .status-dot.error { background: #EF4444; }
+  .status-dot.loading { background: var(--accent); animation: pulse 1s ease infinite; }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    #sidebar { display: none; }
+    .suggestions { grid-template-columns: 1fr; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <a class="slop-logo" href="#">
+      <div class="logo-icon">S</div>
+      SlopGPT
+    </a>
+    <button class="new-chat-btn" title="Nouvelle conversation" onclick="newChat()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="sidebar-section">Aujourd'hui</div>
+  <div class="chat-list" id="chat-list">
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="avatar">U</div>
+    <div>
+      <div class="user-name">Utilisateur</div>
+      <div class="user-plan">Connecté à localhost:8080</div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main id="main">
+  <!-- Top bar -->
+  <div id="topbar">
+    <button class="model-selector">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+      </svg>
+      Mon modèle local
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </button>
+    <div class="topbar-actions">
+      <button class="topbar-btn" onclick="clearChat()">Effacer</button>
+      <button class="topbar-btn" id="test-btn" onclick="testConnection()">Tester connexion</button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div id="messages">
+    <div class="msg-wrapper">
+
+      <!-- Empty state -->
+      <div id="empty-state">
+        <div class="empty-logo">S</div>
+        <h1 class="empty-title">Comment puis-je vous aider ?</h1>
+        <p class="empty-sub">Envoyez une requête à votre application Python locale sur le port 8080. Elle retournera une image en réponse.</p>
+        <div class="suggestions">
+          <button class="suggestion" onclick="fillAndSend('Un chat astronaute flottant dans une nébuleuse colorée')">🚀 Chat astronaute dans l'espace</button>
+          <button class="suggestion" onclick="fillAndSend('Une forêt enchantée au coucher du soleil, style aquarelle')">🌲 Forêt enchantée à l'aquarelle</button>
+          <button class="suggestion" onclick="fillAndSend('Une ville cyberpunk sous la pluie, néons reflétés')">🌃 Ville cyberpunk sous la pluie</button>
+          <button class="suggestion" onclick="fillAndSend('Un café cosy parisien en hiver, ambiance chaleureuse')">☕ Café parisien en hiver</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div id="input-area">
+    <div id="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Vérification de la connexion…</span>
+    </div>
+    <div class="input-container">
+      <textarea
+        id="prompt-input"
+        placeholder="Envoyez un message à votre application Python…"
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <div class="input-toolbar">
+        <div class="input-tools">
+        </div>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Envoyer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="input-footer">Connecté à <strong>http://localhost:8080</strong> — les réponses sont des images</div>
+  </div>
+</main>
+
+<script>
+  const API_URL = 'http://localhost:8080';
+  let isLoading = false;
+
+  // ── Conversations state ──
+  // Each conversation: { id, title, messages: [{role, type:'text'|'image'|'error', content, mime?}] }
+  let conversations = [];
+  let activeId = null;
+
+  const messagesEl = document.getElementById('messages');
+  const inputEl = document.getElementById('prompt-input');
+  const sendBtn = document.getElementById('send-btn');
+  const statusDot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  const chatList = document.getElementById('chat-list');
+
+  function setStatus(state, msg) {
+    statusDot.className = 'status-dot' + (state !== 'ok' ? ' ' + state : '');
+    statusText.textContent = msg;
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function fillAndSend(text) {
+    inputEl.value = text;
+    autoResize(inputEl);
+    sendMessage();
+  }
+
+  // ── Conversation management ──
+  function uid() { return 'c_' + Math.random().toString(36).slice(2, 10); }
+
+  const STORAGE_KEY = 'slopgpt_state_v1';
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ conversations, activeId }));
+    } catch (e) {
+      console.warn('Sauvegarde impossible (quota localStorage dépassé ?)', e);
+    }
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.conversations)) return false;
+      conversations = data.conversations;
+      activeId = data.activeId && conversations.find(c => c.id === data.activeId)
+        ? data.activeId
+        : (conversations[0] ? conversations[0].id : null);
+      return conversations.length > 0;
+    } catch (e) {
+      console.warn('Lecture du stockage impossible', e);
+      return false;
+    }
+  }
+
+  function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  }
+
+  function newChat() {
+    const conv = { id: uid(), title: 'Nouvelle conversation', messages: [] };
+    conversations.unshift(conv);
+    activeId = conv.id;
+    renderChatList();
+    renderActiveConversation();
+    saveState();
+    inputEl.focus();
+  }
+
+  function switchChat(id) {
+    if (id === activeId) return;
+    activeId = id;
+    renderChatList();
+    renderActiveConversation();
+    saveState();
+  }
+
+  function clearChat() {
+    const conv = getActive();
+    if (!conv) return;
+    conv.messages = [];
+    conv.title = 'Nouvelle conversation';
+    renderChatList();
+    renderActiveConversation();
+    saveState();
+  }
+
+  function deleteChat(id) {
+    const targetId = id || activeId;
+    const conv = conversations.find(c => c.id === targetId);
+    if (!conv) return;
+    if (!confirm('Supprimer définitivement cette conversation ?')) return;
+    conversations = conversations.filter(c => c.id !== targetId);
+    if (conversations.length === 0) {
+      newChat();
+      return;
+    }
+    if (activeId === targetId) activeId = conversations[0].id;
+    renderChatList();
+    renderActiveConversation();
+    saveState();
+  }
+
+  function getActive() {
+    return conversations.find(c => c.id === activeId) || null;
+  }
+
+  function renderChatList() {
+    chatList.innerHTML = '';
+    conversations.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'chat-item' + (c.id === activeId ? ' active' : '');
+      item.onclick = () => switchChat(c.id);
+
+      const title = document.createElement('span');
+      title.className = 'chat-item-title';
+      title.textContent = c.title;
+      item.appendChild(title);
+
+      const del = document.createElement('button');
+      del.className = 'chat-item-delete';
+      del.title = 'Supprimer cette conversation';
+      del.textContent = '×';
+      del.onclick = (e) => { e.stopPropagation(); deleteChat(c.id); };
+      item.appendChild(del);
+
+      chatList.appendChild(item);
+    });
+  }
+
+  function renderActiveConversation() {
+    const wrapper = document.querySelector('.msg-wrapper');
+    wrapper.innerHTML = '';
+    const conv = getActive();
+    if (!conv || conv.messages.length === 0) {
+      renderEmptyState(wrapper);
+      return;
+    }
+    conv.messages.forEach(m => {
+      if (m.role === 'user') renderUserMessage(wrapper, m.content);
+      else if (m.type === 'image') renderImageMessage(wrapper, m.content, m.prompt || '');
+      else if (m.type === 'error') renderErrorMessage(wrapper, m.content);
+    });
+    scrollToBottom();
+  }
+
+  function renderEmptyState(wrapper) {
+    const es = document.createElement('div');
+    es.id = 'empty-state';
+    es.innerHTML = `
+      <div class="empty-logo">S</div>
+      <h1 class="empty-title">Comment puis-je vous aider ?</h1>
+      <p class="empty-sub">Envoyez une requête à votre application Python locale sur le port 8080. Elle retournera une image en réponse.</p>
+      <div class="suggestions">
+        <button class="suggestion" onclick="fillAndSend('Un chat astronaute flottant dans une nébuleuse colorée')">🚀 Chat astronaute dans l'espace</button>
+        <button class="suggestion" onclick="fillAndSend('Une forêt enchantée au coucher du soleil, style aquarelle')">🌲 Forêt enchantée à l'aquarelle</button>
+        <button class="suggestion" onclick="fillAndSend('Une ville cyberpunk sous la pluie, néons reflétés')">🌃 Ville cyberpunk sous la pluie</button>
+        <button class="suggestion" onclick="fillAndSend('Un café cosy parisien en hiver, ambiance chaleureuse')">☕ Café parisien en hiver</button>
+      </div>`;
+    wrapper.appendChild(es);
+  }
+
+  function renderUserMessage(wrapper, text) {
+    const msg = document.createElement('div');
+    msg.className = 'message user';
+    msg.innerHTML = `
+      <div class="msg-label">Vous</div>
+      <div class="msg-content">${escapeHtml(text)}</div>`;
+    wrapper.appendChild(msg);
+  }
+
+  function renderImageMessage(wrapper, url, prompt) {
+    const msg = document.createElement('div');
+    msg.className = 'message assistant';
+    msg.innerHTML = `
+      <div class="msg-label"><div class="dot">S</div>SlopGPT</div>
+      <div class="msg-content">
+        <img class="response-image" src="${url}" alt="Réponse générée pour : ${escapeHtml(prompt)}" loading="lazy">
+      </div>
+      <div class="msg-actions">
+        <button class="msg-action-btn" onclick="downloadImage('${url}', 'image.png')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Télécharger
+        </button>
+        <button class="msg-action-btn" onclick="openInNewTab('${url}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Ouvrir
+        </button>
+      </div>`;
+    wrapper.appendChild(msg);
+  }
+
+  function renderErrorMessage(wrapper, errorMsg) {
+    const msg = document.createElement('div');
+    msg.className = 'message assistant';
+    msg.innerHTML = `
+      <div class="msg-label"><div class="dot">S</div>SlopGPT</div>
+      <div class="msg-content">
+        <div class="image-error">⚠️ ${escapeHtml(errorMsg)}</div>
+      </div>`;
+    wrapper.appendChild(msg);
+  }
+
+  async function testConnection() {
+    setStatus('loading', 'Test de connexion…');
+    try {
+      const res = await fetch(`${API_URL}/ping`, { method: 'GET', signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        setStatus('ok', 'Connecté à localhost:8080 ✓');
+        return true;
+      } else {
+        setStatus('error', `Erreur HTTP ${res.status}`);
+        return false;
+      }
+    } catch {
+      setStatus('error', 'Serveur inaccessible — lancez votre app Python');
+      return false;
+    }
+  }
+
+  function appendUserMessage(text) {
+    const empty = document.getElementById('empty-state');
+    if (empty) empty.remove();
+    const wrapper = document.querySelector('.msg-wrapper');
+    renderUserMessage(wrapper, text);
+    scrollToBottom();
+  }
+
+  function appendThinking() {
+    const wrapper = document.querySelector('.msg-wrapper');
+    const msg = document.createElement('div');
+    msg.className = 'message assistant';
+    msg.id = 'thinking-msg';
+    msg.innerHTML = `
+      <div class="msg-label"><div class="dot">S</div>SlopGPT</div>
+      <div class="msg-content">
+        <div class="thinking">
+          <span>Traitement en cours</span>
+          <div class="thinking-dots">
+            <div class="thinking-dot"></div>
+            <div class="thinking-dot"></div>
+            <div class="thinking-dot"></div>
+          </div>
+        </div>
+      </div>`;
+    wrapper.appendChild(msg);
+    scrollToBottom();
+    return msg;
+  }
+
+  function replaceThinkingWithImage(thinkingEl, imageBlob, prompt) {
+    const url = URL.createObjectURL(imageBlob);
+    thinkingEl.remove();
+    const wrapper = document.querySelector('.msg-wrapper');
+    renderImageMessage(wrapper, url, prompt);
+    const conv = getActive();
+    if (conv) {
+      // Store as data URL so it survives page refresh
+      blobToDataURL(imageBlob).then(dataUrl => {
+        conv.messages.push({ role: 'assistant', type: 'image', content: dataUrl, prompt });
+        saveState();
+      });
+    }
+    scrollToBottom();
+    return url;
+  }
+
+  function replaceThinkingWithError(thinkingEl, errorMsg) {
+    thinkingEl.remove();
+    const wrapper = document.querySelector('.msg-wrapper');
+    renderErrorMessage(wrapper, errorMsg);
+    const conv = getActive();
+    if (conv) conv.messages.push({ role: 'assistant', type: 'error', content: errorMsg });
+    saveState();
+    scrollToBottom();
+  }
+
+  async function sendMessage() {
+    const prompt = inputEl.value.trim();
+    if (!prompt || isLoading) return;
+
+    if (!getActive()) newChat();
+
+    isLoading = true;
+    sendBtn.disabled = true;
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+
+    appendUserMessage(prompt);
+    const conv = getActive();
+    conv.messages.push({ role: 'user', type: 'text', content: prompt });
+    if (conv.title === 'Nouvelle conversation') {
+      conv.title = prompt.substring(0, 40) + (prompt.length > 40 ? '…' : '');
+      renderChatList();
+    }
+    saveState();
+
+    const thinkingEl = appendThinking();
+    setStatus('loading', 'Requête en cours…');
+
+    try {
+      const response = await fetch(`${API_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt }),
+        signal: AbortSignal.timeout(60000)
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`HTTP ${response.status}${errText ? ' — ' + errText.substring(0, 120) : ''}`);
+      }
+
+      const contentType = response.headers.get('Content-Type') || '';
+
+      if (contentType.startsWith('image/')) {
+        const blob = await response.blob();
+        replaceThinkingWithImage(thinkingEl, blob, prompt);
+        setStatus('ok', 'Image reçue ✓');
+        setTimeout(() => setStatus('ok', 'Connecté à localhost:8080 ✓'), 2500);
+      } else {
+        // If server returns JSON with base64 image
+        const data = await response.json();
+        if (data.image) {
+          const byteStr = atob(data.image);
+          const bytes = new Uint8Array(byteStr.length);
+          for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
+          const blob = new Blob([bytes], { type: data.mime_type || 'image/png' });
+          replaceThinkingWithImage(thinkingEl, blob, prompt);
+          setStatus('ok', 'Image reçue ✓');
+          setTimeout(() => setStatus('ok', 'Connecté à localhost:8080 ✓'), 2500);
+        } else if (data.error) {
+          throw new Error(data.error);
+        } else {
+          throw new Error('La réponse ne contient pas d\'image. Assurez-vous que votre serveur renvoie une image ou un JSON avec un champ "image" en base64.');
+        }
+      }
+
+    } catch (err) {
+      let msg = err.message;
+      if (err.name === 'TimeoutError') msg = 'Délai dépassé — le serveur met trop de temps à répondre.';
+      else if (err.name === 'TypeError' && msg.includes('fetch')) msg = 'Impossible de contacter localhost:8080. Vérifiez que votre application Python est lancée et que les headers CORS sont activés.';
+      replaceThinkingWithError(thinkingEl, msg);
+      setStatus('error', 'Erreur — ' + msg.substring(0, 60));
+    } finally {
+      isLoading = false;
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function downloadImage(url, filename) {
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+  }
+
+  function openInNewTab(url) {
+    window.open(url, '_blank');
+  }
+
+  // ── Init ──
+  if (loadState()) {
+    renderChatList();
+    renderActiveConversation();
+  } else {
+    newChat();
+  }
+  inputEl.focus();
+  testConnection();
+</script>
+
+<!--
+═══════════════════════════════════════════════════════════════
+  EXEMPLE D'APPLICATION PYTHON (Flask) — copiez dans app.py
+═══════════════════════════════════════════════════════════════
+
+  pip install flask flask-cors Pillow
+
+  ─── app.py ───────────────────────────────────────────────
+  from flask import Flask, request, send_file, jsonify
+  from flask_cors import CORS
+  from PIL import Image, ImageDraw, ImageFont
+  import io, random
+
+  app = Flask(__name__)
+  CORS(app)  # ← OBLIGATOIRE pour les requêtes depuis file://
+
+  @app.route('/ping')
+  def ping():
+      return 'ok'
+
+  @app.route('/generate', methods=['POST'])
+  def generate():
+      data = request.get_json()
+      prompt = data.get('prompt', '')
+
+      # Exemple : générer une image simple avec le prompt
+      img = Image.new('RGB', (800, 500),
+            color=(random.randint(40,180), random.randint(40,180), random.randint(40,180)))
+      draw = ImageDraw.Draw(img)
+      draw.text((40, 220), prompt[:60], fill='white')
+
+      buf = io.BytesIO()
+      img.save(buf, format='PNG')
+      buf.seek(0)
+
+      # Option A : retourner l'image directement
+      return send_file(buf, mimetype='image/png')
+
+      # Option B : retourner un JSON avec l'image en base64
+      # import base64
+      # return jsonify({'image': base64.b64encode(buf.read()).decode(), 'mime_type': 'image/png'})
+
+  if __name__ == '__main__':
+      app.run(port=8080, debug=True)
+  ──────────────────────────────────────────────────────────
+
+  Lancer avec : python app.py
+  Ouvrir l'interface : double-clic sur ce fichier .html
+
+═══════════════════════════════════════════════════════════════
+-->
+</body>
+</html>
