@@ -1,0 +1,12 @@
+[
+  {
+    "prompt": "generate digit 2",
+    "label": 2,
+    "classical_prediction": 2,
+    "quantum_prediction": 2,
+    "classical_mae": 0.06615425751415493,
+    "quantum_mae": 0.0798091449871748,
+    "classical_mse": 0.005934838771259901,
+    "quantum_mse": 0.008545040960977197
+  }
+]
