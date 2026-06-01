@@ -493,6 +493,22 @@
 
   .input-tools { display: flex; gap: 2px; }
 
+  .mode-select {
+    border: 1px solid var(--border-md);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--text-secondary);
+    font-size: 12px;
+    padding: 6px 9px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .mode-select:focus {
+    border-color: rgba(217,119,6,0.55);
+    box-shadow: 0 0 0 2px rgba(217,119,6,0.1);
+  }
+
   .tool-btn {
     background: none;
     border: none;
@@ -688,6 +704,11 @@
       ></textarea>
       <div class="input-toolbar">
         <div class="input-tools">
+          <select id="shot-mode" class="mode-select" title="Quantum sampling mode">
+            <option value="fast">Fast - 256 shots</option>
+            <option value="balanced" selected>Balanced - 768 shots</option>
+            <option value="deepthinking">DeepThinking - 1024 shots</option>
+          </select>
         </div>
         <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Envoyer">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
@@ -712,6 +733,7 @@
   const messagesEl = document.getElementById('messages');
   const inputEl = document.getElementById('prompt-input');
   const sendBtn = document.getElementById('send-btn');
+  const modeEl = document.getElementById('shot-mode');
   const statusDot = document.getElementById('status-dot');
   const statusText = document.getElementById('status-text');
   const chatList = document.getElementById('chat-list');
@@ -999,6 +1021,7 @@
   async function sendMessage() {
     const prompt = inputEl.value.trim();
     if (!prompt || isLoading) return;
+    const mode = modeEl.value;
 
     if (!getActive()) newChat();
 
@@ -1023,8 +1046,8 @@
       const response = await fetch(`${API_URL}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt }),
-        signal: AbortSignal.timeout(60000)
+        body: JSON.stringify({ prompt: prompt, mode: mode }),
+        signal: AbortSignal.timeout(240000)
       });
 
       if (!response.ok) {

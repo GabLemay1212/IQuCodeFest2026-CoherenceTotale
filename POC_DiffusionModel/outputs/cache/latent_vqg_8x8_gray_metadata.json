@@ -1,0 +1,36 @@
+{
+  "prompts": [
+    "cat",
+    "fish",
+    "panda",
+    "mushroom",
+    "school bus"
+  ],
+  "labels": [
+    27,
+    0,
+    53,
+    195,
+    134
+  ],
+  "class_ids": [
+    "n02123045",
+    "n01443537",
+    "n02509815",
+    "n13001041",
+    "n04146614"
+  ],
+  "class_names": [
+    "tabby, tabby cat",
+    "goldfish, Carassius auratus",
+    "lesser panda, red panda, panda, bear cat, cat bear, Ailurus fulgens",
+    "mushroom",
+    "school bus"
+  ],
+  "samples_per_class": 48,
+  "latent_dim": 8,
+  "image_size": 8,
+  "epochs": 900,
+  "learning_rate": 0.28,
+  "final_loss": 0.0371076725423336
+}

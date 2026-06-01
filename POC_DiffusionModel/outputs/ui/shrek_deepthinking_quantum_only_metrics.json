@@ -1,0 +1,12 @@
+{
+  "prompt": "shrek",
+  "target": "abstract",
+  "color": "red",
+  "shots": 1024,
+  "depth": 4,
+  "circuits": 32,
+  "qubits_per_circuit": 32,
+  "dataset_class": null,
+  "mean_intensity": 0.48984718322753906,
+  "std_intensity": 0.04457439945633021
+}

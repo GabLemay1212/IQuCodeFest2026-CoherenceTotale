@@ -1,0 +1,12 @@
+{
+  "prompt": "among us",
+  "target": "abstract",
+  "color": "yellow",
+  "shots": 1024,
+  "depth": 4,
+  "circuits": 32,
+  "qubits_per_circuit": 32,
+  "dataset_class": null,
+  "mean_intensity": 0.48920631408691406,
+  "std_intensity": 0.047331860062983774
+}

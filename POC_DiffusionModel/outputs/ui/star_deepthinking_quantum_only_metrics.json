@@ -1,0 +1,12 @@
+{
+  "prompt": "Star",
+  "target": "star",
+  "color": "purple",
+  "shots": 1024,
+  "depth": 4,
+  "circuits": 32,
+  "qubits_per_circuit": 32,
+  "dataset_class": null,
+  "mean_intensity": 0.3388671875,
+  "std_intensity": 0.19981725863886668
+}

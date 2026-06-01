@@ -1,0 +1,12 @@
+{
+  "prompt": "Panda",
+  "target": "lesser panda, red panda, panda, bear cat, cat bear, Ailurus fulgens",
+  "color": "dataset-rgb",
+  "shots": 256,
+  "depth": 4,
+  "circuits": 96,
+  "qubits_per_circuit": 32,
+  "dataset_class": "n02509815",
+  "mean_intensity": 0.37418238321940106,
+  "std_intensity": 0.11745939319368376
+}

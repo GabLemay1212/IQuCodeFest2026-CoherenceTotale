@@ -127,24 +127,87 @@ The UI route now uses a quantum-only generator:
 
 ```text
 prompt text
-  -> circuit parameters
-  -> 32 row-wise quantum circuits
+  -> Tiny ImageNet class match when possible
+  -> class RGB prototype
+  -> 96 row-wise quantum circuits for RGB
   -> each circuit has 32 qubits
   -> measurement probabilities become pixels
-  -> colorized PNG response
+  -> PNG response
 ```
 
-This avoids the classical diffusion denoising path. A single 1024-qubit circuit
-would not be realistic locally, so the image is generated as 32 quantum row
-circuits. You can increase the workload in `SlopGPT.py`:
+This avoids the classical diffusion denoising path. If the prompt matches a
+Tiny ImageNet class, the dataset prototype sets the circuit rotation
+probabilities and the final image is produced from measured quantum
+frequencies. A single 1024-qubit circuit would not be realistic locally, so the
+image is generated as row-wise quantum circuits. If no Tiny ImageNet class
+matches, the server falls back to abstract quantum generation.
+
+The UI first tries a newer latent trained quantum generator. This model is more
+AI-like because the same prompt can produce different images:
+
+```text
+prompt -> Tiny ImageNet class
+class + random latent vector
+  -> trained quantum RY parameters
+  -> Qiskit measurements
+  -> 8x8 grayscale sample enlarged for the chat
+```
+
+Train or retrain it with:
+
+```bash
+python POC_DiffusionModel/train_latent_quantum_generator.py
+```
+
+The default training classes are:
+
+```text
+cat, fish, panda, mushroom, school bus
+```
+
+The trained model is saved in:
+
+```text
+POC_DiffusionModel/outputs/cache/latent_vqg_8x8_gray.npz
+```
+
+For the larger all-100k-image experiment, use:
+
+```text
+SlopGPT-Training/
+```
+
+That folder contains the full Tiny ImageNet streaming trainer and the 200-class
+prompt vocabulary file.
+
+The first Tiny ImageNet request builds this cache:
+
+```text
+POC_DiffusionModel/outputs/cache/
+```
+
+After that, class matching is much faster.
+
+The UI has three quantum sampling modes:
+
+```text
+Fast         -> 256 shots
+Balanced     -> 768 shots
+DeepThinking -> 1024 shots
+```
+
+Higher shots reduce sampling noise but increase CPU time. Circuit depth is
+still controlled in `SlopGPT.py`:
 
 ```python
-QUANTUM_ONLY_SHOTS = 768
 QUANTUM_ONLY_DEPTH = 4
 ```
 
-Higher shots reduce sampling noise. Higher depth adds more circuit operations
-and CPU cost.
+For Tiny ImageNet, the generator uses a representative real image for each
+matched class. It does not average all class examples, because averaging cats,
+dogs, buses, etc. usually creates gray blurry prototypes. It also ignores color
+words such as `red` or `yellow` when matching dataset classes, so `red apple`
+does not accidentally match `red panda`.
 
 If the prompt is not a known digit or supported shape, the server now falls
 back to an abstract prompt-conditioned image. For example:

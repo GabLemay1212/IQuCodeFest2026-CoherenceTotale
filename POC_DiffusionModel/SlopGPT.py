@@ -18,6 +18,14 @@ from quantum_only_generator import (
     save_quantum_only_metrics,
     save_quantum_only_report,
 )
+from latent_quantum_generator import (
+    generate_latent_quantum_for_prompt,
+    save_latent_quantum_report,
+)
+from trained_quantum_generator import (
+    generate_trained_quantum_for_prompt,
+    save_trained_quantum_report,
+)
 
 
 app = Flask(__name__)
@@ -34,7 +42,12 @@ CORS(
 )
 
 OUTPUT_DIR = Path(__file__).resolve().parent / "outputs" / "ui"
-QUANTUM_ONLY_SHOTS = 768
+SHOT_MODES = {
+    "fast": 256,
+    "balanced": 768,
+    "deepthinking": 1024,
+}
+DEFAULT_SHOT_MODE = "balanced"
 QUANTUM_ONLY_DEPTH = 4
 
 
@@ -43,18 +56,38 @@ def _safe_name(prompt: str) -> str:
     return name[:80] or "generated_image"
 
 
-def generate_prompt_image(prompt: str) -> Path:
+def _shots_for_mode(mode: str) -> tuple[str, int]:
+    normalized = re.sub(r"[^a-zA-Z]", "", mode.lower())
+    if normalized not in SHOT_MODES:
+        normalized = DEFAULT_SHOT_MODE
+    return normalized, SHOT_MODES[normalized]
+
+
+def generate_prompt_image(prompt: str, mode: str = DEFAULT_SHOT_MODE) -> Path:
     """Generate a quantum-only PNG for a UI prompt and return its path."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     safe_prompt = _safe_name(prompt)
+    mode_name, shots = _shots_for_mode(mode)
+    latent_result = generate_latent_quantum_for_prompt(prompt, shots=shots)
+    if latent_result is not None:
+        image_path = OUTPUT_DIR / f"{safe_prompt}_{mode_name}_latent_vqg_report.png"
+        save_latent_quantum_report(latent_result, image_path)
+        return image_path
+
+    trained_result = generate_trained_quantum_for_prompt(prompt, shots=shots, seed=7)
+    if trained_result is not None:
+        image_path = OUTPUT_DIR / f"{safe_prompt}_{mode_name}_trained_vqg_report.png"
+        save_trained_quantum_report(trained_result, image_path)
+        return image_path
+
     result = generate_quantum_only_for_prompt(
         prompt,
-        shots=QUANTUM_ONLY_SHOTS,
+        shots=shots,
         depth=QUANTUM_ONLY_DEPTH,
         seed=7,
     )
-    image_path = OUTPUT_DIR / f"{safe_prompt}_quantum_only_report.png"
-    metrics_path = OUTPUT_DIR / f"{safe_prompt}_quantum_only_metrics.json"
+    image_path = OUTPUT_DIR / f"{safe_prompt}_{mode_name}_quantum_only_report.png"
+    metrics_path = OUTPUT_DIR / f"{safe_prompt}_{mode_name}_quantum_only_metrics.json"
     save_quantum_only_report(result, image_path)
     save_quantum_only_metrics(result, metrics_path)
     return image_path
@@ -72,10 +105,11 @@ def generate():
 
     data = request.get_json(force=True)
     prompt = data.get("prompt", "").strip()
+    mode = data.get("mode", DEFAULT_SHOT_MODE)
     if not prompt:
         prompt = "yellow star"
 
-    image_path = generate_prompt_image(prompt)
+    image_path = generate_prompt_image(prompt, mode)
     return send_file(image_path, mimetype="image/png")
 
 

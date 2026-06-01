@@ -1,0 +1,11 @@
+{
+  "prompt": "yellow star",
+  "target": "star",
+  "color": "yellow",
+  "shots": 1024,
+  "depth": 4,
+  "circuits": 32,
+  "qubits_per_circuit": 32,
+  "mean_intensity": 0.34266090393066406,
+  "std_intensity": 0.1969119867953048
+}
