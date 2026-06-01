@@ -1,0 +1,11 @@
+{
+  "prompt": "Blue triangle",
+  "target": "triangle",
+  "color": "blue",
+  "shots": 768,
+  "depth": 4,
+  "circuits": 32,
+  "qubits_per_circuit": 32,
+  "mean_intensity": 0.35619354248046875,
+  "std_intensity": 0.17148466153577702
+}

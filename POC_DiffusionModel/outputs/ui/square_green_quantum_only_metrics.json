@@ -1,0 +1,11 @@
+{
+  "prompt": "Square green",
+  "target": "square",
+  "color": "green",
+  "shots": 768,
+  "depth": 4,
+  "circuits": 32,
+  "qubits_per_circuit": 32,
+  "mean_intensity": 0.3716112772623698,
+  "std_intensity": 0.1693384047077513
+}

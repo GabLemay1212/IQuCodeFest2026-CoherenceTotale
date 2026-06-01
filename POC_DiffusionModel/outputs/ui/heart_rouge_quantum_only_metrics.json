@@ -1,0 +1,11 @@
+{
+  "prompt": "Heart rouge",
+  "target": "abstract",
+  "color": "orange",
+  "shots": 768,
+  "depth": 4,
+  "circuits": 32,
+  "qubits_per_circuit": 32,
+  "mean_intensity": 0.4883867899576823,
+  "std_intensity": 0.0424931001450242
+}

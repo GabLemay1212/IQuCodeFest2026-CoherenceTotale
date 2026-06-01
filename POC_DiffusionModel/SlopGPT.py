@@ -13,21 +13,10 @@ from pathlib import Path
 from flask import Flask, request, send_file
 from flask_cors import CORS
 
-from quantum_diffusion_poc import (
-    build_digit_prototypes,
-    generate_for_prompt,
-    load_digit_data,
-    parse_prompt,
-    save_metrics,
-    save_visual_report,
-    train_evaluator,
-)
-from shape_diffusion import (
-    generate_abstract_for_prompt,
-    generate_shape_for_prompt,
-    parse_shape_prompt,
-    save_shape_metrics,
-    save_shape_visual_report,
+from quantum_only_generator import (
+    generate_quantum_only_for_prompt,
+    save_quantum_only_metrics,
+    save_quantum_only_report,
 )
 
 
@@ -45,7 +34,8 @@ CORS(
 )
 
 OUTPUT_DIR = Path(__file__).resolve().parent / "outputs" / "ui"
-_DIGIT_CONTEXT: tuple[dict[int, object], object] | None = None
+QUANTUM_ONLY_SHOTS = 768
+QUANTUM_ONLY_DEPTH = 4
 
 
 def _safe_name(prompt: str) -> str:
@@ -53,66 +43,20 @@ def _safe_name(prompt: str) -> str:
     return name[:80] or "generated_image"
 
 
-def _get_digit_context():
-    """Load digit prototypes and evaluator once for the Flask process."""
-    global _DIGIT_CONTEXT
-    if _DIGIT_CONTEXT is None:
-        images, labels = load_digit_data()
-        prototypes = build_digit_prototypes(images, labels)
-        evaluator = train_evaluator(images, labels)
-        _DIGIT_CONTEXT = (prototypes, evaluator)
-    return _DIGIT_CONTEXT
-
-
-def _detect_prompt_type(prompt: str) -> str:
-    try:
-        parse_prompt(prompt)
-        return "digit"
-    except ValueError:
-        pass
-
-    try:
-        parse_shape_prompt(prompt)
-        return "shape"
-    except ValueError:
-        pass
-
-    return "abstract"
-
-
 def generate_prompt_image(prompt: str) -> Path:
-    """Generate a report PNG for a UI prompt and return its path."""
+    """Generate a quantum-only PNG for a UI prompt and return its path."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     safe_prompt = _safe_name(prompt)
-    prompt_type = _detect_prompt_type(prompt)
-
-    if prompt_type == "digit":
-        prototypes, evaluator = _get_digit_context()
-        result = generate_for_prompt(
-            prompt,
-            prototypes,
-            evaluator,
-            shots=256,
-            steps=20,
-            seed=7,
-        )
-        image_path = OUTPUT_DIR / f"{safe_prompt}_digit_report.png"
-        metrics_path = OUTPUT_DIR / f"{safe_prompt}_digit_metrics.json"
-        save_visual_report([result], image_path)
-        save_metrics([result], metrics_path)
-        return image_path
-
-    if prompt_type == "shape":
-        result = generate_shape_for_prompt(prompt, shots=256, steps=20, seed=7)
-        suffix = "shape"
-    else:
-        result = generate_abstract_for_prompt(prompt, shots=256, steps=20, seed=7)
-        suffix = "abstract"
-
-    image_path = OUTPUT_DIR / f"{safe_prompt}_{suffix}_report.png"
-    metrics_path = OUTPUT_DIR / f"{safe_prompt}_{suffix}_metrics.json"
-    save_shape_visual_report(result, image_path)
-    save_shape_metrics(result, metrics_path)
+    result = generate_quantum_only_for_prompt(
+        prompt,
+        shots=QUANTUM_ONLY_SHOTS,
+        depth=QUANTUM_ONLY_DEPTH,
+        seed=7,
+    )
+    image_path = OUTPUT_DIR / f"{safe_prompt}_quantum_only_report.png"
+    metrics_path = OUTPUT_DIR / f"{safe_prompt}_quantum_only_metrics.json"
+    save_quantum_only_report(result, image_path)
+    save_quantum_only_metrics(result, metrics_path)
     return image_path
 
 

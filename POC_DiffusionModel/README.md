@@ -97,8 +97,8 @@ POC_DiffusionModel/outputs/terminal/
 
 ## Chat UI Server
 
-The file `POC_DiffusionModel/test.py` is the Flask server used by the chat UI.
-It exposes the same endpoints as the original root `test.py`:
+The file `POC_DiffusionModel/SlopGPT.py` is the Flask server used by the chat
+UI. It exposes the same endpoints as the original root `test.py`:
 
 ```text
 GET  /ping
@@ -108,7 +108,7 @@ POST /generate
 Run it from the repository root:
 
 ```bash
-python POC_DiffusionModel/test.py
+python POC_DiffusionModel/SlopGPT.py
 ```
 
 Then open the UI and send prompts such as:
@@ -122,6 +122,29 @@ generate digit 7
 
 The server returns a PNG directly, so the UI pastes the generated image into
 the chat as the assistant response.
+
+The UI route now uses a quantum-only generator:
+
+```text
+prompt text
+  -> circuit parameters
+  -> 32 row-wise quantum circuits
+  -> each circuit has 32 qubits
+  -> measurement probabilities become pixels
+  -> colorized PNG response
+```
+
+This avoids the classical diffusion denoising path. A single 1024-qubit circuit
+would not be realistic locally, so the image is generated as 32 quantum row
+circuits. You can increase the workload in `SlopGPT.py`:
+
+```python
+QUANTUM_ONLY_SHOTS = 768
+QUANTUM_ONLY_DEPTH = 4
+```
+
+Higher shots reduce sampling noise. Higher depth adds more circuit operations
+and CPU cost.
 
 If the prompt is not a known digit or supported shape, the server now falls
 back to an abstract prompt-conditioned image. For example:
