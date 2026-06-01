@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -175,6 +176,80 @@ def generate_shape_for_prompt(
     )
 
 
+def _prompt_seed(prompt: str) -> int:
+    digest = hashlib.sha256(prompt.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], byteorder="little", signed=False)
+
+
+def render_abstract_prompt_prototype(prompt: str, size: int = IMAGE_SHAPE[0]) -> np.ndarray:
+    """Create a deterministic abstract target for arbitrary text prompts."""
+    seed = _prompt_seed(prompt)
+    rng = np.random.default_rng(seed)
+    y, x = np.mgrid[0:size, 0:size]
+
+    freq_x = rng.uniform(1.0, 4.0)
+    freq_y = rng.uniform(1.0, 4.0)
+    phase = rng.uniform(0.0, 2.0 * np.pi)
+    cx, cy = rng.uniform(0.30, 0.70, size=2)
+    radius = rng.uniform(0.18, 0.36)
+
+    xn = x / max(size - 1, 1)
+    yn = y / max(size - 1, 1)
+    waves = 0.5 + 0.25 * np.sin(freq_x * np.pi * xn + phase)
+    waves += 0.25 * np.cos(freq_y * np.pi * yn - phase)
+    blob = np.exp(-(((xn - cx) ** 2 + (yn - cy) ** 2) / (2.0 * radius**2)))
+    prototype = 0.58 * waves + 0.42 * blob
+    return np.clip(prototype, 0.0, 1.0)
+
+
+def generate_abstract_for_prompt(
+    prompt: str,
+    *,
+    shots: int = 256,
+    steps: int = 20,
+    seed: int = 7,
+) -> ShapeGenerationResult:
+    """Fallback generator for arbitrary prompts not covered by known classes."""
+    prompt_hash = _prompt_seed(prompt)
+    label = prompt_hash % 10
+    color = parse_color(prompt, default_index=label)
+    prototype = render_abstract_prompt_prototype(prompt)
+    quantum_mask = quantum_latent_mask(
+        label,
+        shots=shots,
+        seed=seed + prompt_hash % 1000,
+        guidance_image=prototype,
+    )
+    classical_conditioning = np.full(IMAGE_SHAPE, fill_value=(label + 1) / 11.0)
+
+    classical_image = denoise_from_prompt(
+        prototype,
+        classical_conditioning,
+        steps=steps,
+        seed=seed + 500 + label,
+        conditioning_weight=0.10,
+    )
+    quantum_image = denoise_from_prompt(
+        prototype,
+        quantum_mask,
+        steps=steps,
+        seed=seed + 600 + label,
+        conditioning_weight=0.42,
+    )
+
+    return ShapeGenerationResult(
+        prompt=prompt,
+        shape="abstract",
+        color=color,
+        prototype=prototype,
+        classical_image=classical_image,
+        quantum_mask=quantum_mask,
+        quantum_image=quantum_image,
+        classical_mae=float(np.mean(np.abs(prototype - classical_image))),
+        quantum_mae=float(np.mean(np.abs(prototype - quantum_image))),
+    )
+
+
 def save_shape_visual_report(result: ShapeGenerationResult, output_path: Path) -> None:
     """Save a one-prompt shape generation report."""
     fig, axes = plt.subplots(1, 4, figsize=(9, 2.4))
@@ -185,9 +260,10 @@ def save_shape_visual_report(result: ShapeGenerationResult, output_path: Path) -
         ("Quantum output", result.quantum_image),
     ]
 
+    label_index = SHAPE_TO_ID.get(result.shape, _prompt_seed(result.prompt) % 10)
     for axis, (title, panel) in zip(axes, panels):
         axis.imshow(
-            colorize_image(panel, SHAPE_TO_ID[result.shape], result.color),
+            colorize_image(panel, label_index, result.color),
             interpolation="nearest",
         )
         axis.set_title(title)

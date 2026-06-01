@@ -123,6 +123,18 @@ generate digit 7
 The server returns a PNG directly, so the UI pastes the generated image into
 the chat as the assistant response.
 
+If the prompt is not a known digit or supported shape, the server now falls
+back to an abstract prompt-conditioned image. For example:
+
+```text
+neon quantum waterfall
+purple spiral portal
+angry electric banana
+```
+
+Those arbitrary prompts are not semantically understood yet, but they do
+produce deterministic prompt-conditioned quantum images instead of failing.
+
 Generated UI outputs are also saved in:
 
 ```text
@@ -137,6 +149,13 @@ download. If you want a larger real dataset later, good options are:
 - Google QuickDraw dataset: very large hand-drawn sketch dataset with classes
   such as `circle`, `square`, and `triangle`.
   https://github.com/googlecreativelab/quickdraw-dataset
+- Hugging Face `google/quickdraw`: easier Python loading path for QuickDraw.
+  Search for: `Hugging Face google quickdraw dataset`
+  https://huggingface.co/datasets/google/quickdraw
+- Sketchy dataset: object sketch dataset useful if you want object categories
+  beyond simple shapes.
+  Search for: `Sketchy dataset object sketches`
+  https://huggingface.co/datasets/DrRORAL/sketchy-dataset
 - dSprites: official/simple procedural shape dataset with square, ellipse, and
   heart latent factors.
   https://www.tensorflow.org/datasets/catalog/dsprites
@@ -147,6 +166,17 @@ download. If you want a larger real dataset later, good options are:
 For the hackathon, synthetic local shapes are probably the fastest demo path.
 QuickDraw is the better next step if you want the prompts to feel more like
 real sketch generation.
+
+Useful search terms:
+
+```text
+google quickdraw dataset 345 categories
+huggingface google quickdraw image dataset
+sketchy dataset object sketches
+simple icons image dataset labels
+geometric shapes image dataset rgb
+captioned image dataset small objects
+```
 
 Custom prompts:
 

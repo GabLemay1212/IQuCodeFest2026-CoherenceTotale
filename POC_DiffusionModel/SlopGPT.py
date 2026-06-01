@@ -7,7 +7,6 @@ uses the quantum-conditioned diffusion POC instead of drawing placeholder text.
 
 from __future__ import annotations
 
-import io
 import re
 from pathlib import Path
 
@@ -24,6 +23,7 @@ from quantum_diffusion_poc import (
     train_evaluator,
 )
 from shape_diffusion import (
+    generate_abstract_for_prompt,
     generate_shape_for_prompt,
     parse_shape_prompt,
     save_shape_metrics,
@@ -77,10 +77,7 @@ def _detect_prompt_type(prompt: str) -> str:
     except ValueError:
         pass
 
-    raise ValueError(
-        "Prompt not supported. Try examples like 'generate digit 7', "
-        "'yellow star', 'orange circle', or 'blue triangle'."
-    )
+    return "abstract"
 
 
 def generate_prompt_image(prompt: str) -> Path:
@@ -105,9 +102,15 @@ def generate_prompt_image(prompt: str) -> Path:
         save_metrics([result], metrics_path)
         return image_path
 
-    result = generate_shape_for_prompt(prompt, shots=256, steps=20, seed=7)
-    image_path = OUTPUT_DIR / f"{safe_prompt}_shape_report.png"
-    metrics_path = OUTPUT_DIR / f"{safe_prompt}_shape_metrics.json"
+    if prompt_type == "shape":
+        result = generate_shape_for_prompt(prompt, shots=256, steps=20, seed=7)
+        suffix = "shape"
+    else:
+        result = generate_abstract_for_prompt(prompt, shots=256, steps=20, seed=7)
+        suffix = "abstract"
+
+    image_path = OUTPUT_DIR / f"{safe_prompt}_{suffix}_report.png"
+    metrics_path = OUTPUT_DIR / f"{safe_prompt}_{suffix}_metrics.json"
     save_shape_visual_report(result, image_path)
     save_shape_metrics(result, metrics_path)
     return image_path
@@ -128,23 +131,7 @@ def generate():
     if not prompt:
         prompt = "yellow star"
 
-    try:
-        image_path = generate_prompt_image(prompt)
-    except ValueError as exc:
-        # The UI expects an image, so return a tiny readable error PNG instead
-        # of JSON. This lets the chat display the failure directly.
-        from PIL import Image, ImageDraw
-
-        img = Image.new("RGB", (900, 260), color=(28, 32, 42))
-        draw = ImageDraw.Draw(img)
-        draw.text((30, 40), "Unsupported prompt", fill=(255, 120, 120))
-        draw.text((30, 90), str(exc), fill=(245, 245, 245))
-        draw.text((30, 150), "Try: yellow star, orange circle, blue triangle, generate digit 7", fill=(190, 210, 255))
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-        buf.seek(0)
-        return send_file(buf, mimetype="image/png")
-
+    image_path = generate_prompt_image(prompt)
     return send_file(image_path, mimetype="image/png")
 
 
