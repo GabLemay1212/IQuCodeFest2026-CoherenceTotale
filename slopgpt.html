@@ -618,6 +618,36 @@
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; }
+
+  /* ── Quantum transform toolbar (per image) ── */
+  .quantum-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-sans);
+    flex-wrap: wrap;
+  }
+  .qt-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+  }
+  .qt-factor { padding: 4px 8px; font-size: 12px; }
+  .qt-btn { padding: 4px 10px; font-size: 12px; }
+  .qt-btn:disabled { opacity: 0.5; cursor: wait; }
+  .qt-status {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+  .qt-status.error { color: #DC2626; }
+  .qt-status.ok { color: #16A34A; }
 </style>
 </head>
 <body>
@@ -726,6 +756,7 @@
 
 <script>
   const API_URL = 'http://localhost:8080';
+  const QUANTUM_API_URL = 'http://localhost:8081';
   let isLoading = false;
 
   // ── Conversations state ──
@@ -922,6 +953,16 @@
       <div class="msg-label"><div class="dot">S</div>SlopGPT</div>
       <div class="msg-content">
         <img class="response-image" src="${url}" alt="Réponse générée pour : ${escapeHtml(prompt)}" loading="lazy">
+        <div class="quantum-tools">
+          <span class="qt-label">Quantum&nbsp;⚛</span>
+          <select class="mode-select qt-factor" title="Facteur">
+            <option value="2">×2</option>
+            <option value="4">×4</option>
+          </select>
+          <button class="topbar-btn qt-btn qt-down">Downscale</button>
+          <button class="topbar-btn qt-btn qt-up">Upscale</button>
+          <span class="qt-status"></span>
+        </div>
       </div>
       <div class="msg-actions">
         <button class="msg-action-btn" onclick="downloadImage('${url}', 'image.png')">
@@ -933,6 +974,12 @@
           Ouvrir
         </button>
       </div>`;
+    const sel = msg.querySelector('.qt-factor');
+    const statusEl = msg.querySelector('.qt-status');
+    msg.querySelector('.qt-down').addEventListener('click', () =>
+      runQuantumTransform('downscale', url, parseInt(sel.value, 10), msg, statusEl));
+    msg.querySelector('.qt-up').addEventListener('click', () =>
+      runQuantumTransform('upscale', url, parseInt(sel.value, 10), msg, statusEl));
     wrapper.appendChild(msg);
   }
 
@@ -1111,6 +1158,60 @@
 
   function openInNewTab(url) {
     window.open(url, '_blank');
+  }
+
+  // ── Quantum transform (calls Python server on port 8081) ──
+  async function runQuantumTransform(kind, sourceUrl, factor, sourceMsgEl, statusEl) {
+    if (![2, 4].includes(factor)) { factor = 2; }
+    const btns = sourceMsgEl.querySelectorAll('.qt-btn');
+    btns.forEach(b => b.disabled = true);
+    statusEl.className = 'qt-status';
+    statusEl.textContent = kind === 'upscale'
+      ? `Upscale ×${factor} en cours…`
+      : `Downscale ×${factor} en cours…`;
+
+    try {
+      const srcBlob = await (await fetch(sourceUrl)).blob();
+      const form = new FormData();
+      form.append('image', srcBlob, 'input.png');
+      form.append('factor', String(factor));
+
+      const resp = await fetch(`${QUANTUM_API_URL}/${kind}`, {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.timeout(600000),
+      });
+      if (!resp.ok) {
+        let errMsg = `HTTP ${resp.status}`;
+        try { const j = await resp.json(); if (j.error) errMsg = j.error; } catch {}
+        throw new Error(errMsg);
+      }
+      const blob = await resp.blob();
+      const label = `${kind} ×${factor}`;
+      const wrapper = document.querySelector('.msg-wrapper');
+      const newUrl = URL.createObjectURL(blob);
+      renderImageMessage(wrapper, newUrl, label);
+      const conv = getActive();
+      if (conv) {
+        blobToDataURL(blob).then(dataUrl => {
+          conv.messages.push({ role: 'assistant', type: 'image', content: dataUrl, prompt: label });
+          saveState();
+        });
+      }
+      scrollToBottom();
+      statusEl.className = 'qt-status ok';
+      statusEl.textContent = `✓ ${label}`;
+    } catch (err) {
+      let m = err.message || String(err);
+      if (err.name === 'TimeoutError') m = 'Délai dépassé.';
+      else if (err.name === 'TypeError' && /fetch/i.test(m)) {
+        m = 'Serveur quantique inaccessible sur localhost:8081';
+      }
+      statusEl.className = 'qt-status error';
+      statusEl.textContent = '⚠ ' + m;
+    } finally {
+      btns.forEach(b => b.disabled = false);
+    }
   }
 
   // ── Init ──
