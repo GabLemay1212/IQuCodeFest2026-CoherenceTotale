@@ -1,7 +1,0 @@
-{
-  "prompt": "Blue Triangle",
-  "shape": "triangle",
-  "color": "blue",
-  "classical_mae": 0.055865198322117025,
-  "quantum_mae": 0.13913454378722867
-}

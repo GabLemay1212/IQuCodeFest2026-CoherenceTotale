@@ -36,22 +36,23 @@ from tiny_imagenet_adapter import DATA_DIR, _load_class_names, _load_dataset_lab
 
 
 OUT_DIR = Path(__file__).resolve().parent / "outputs"
-CHECKPOINT_PATH = OUT_DIR / "full_tiny_imagenet_latent_vqg_8x8_gray.npz"
-META_PATH = OUT_DIR / "full_tiny_imagenet_latent_vqg_8x8_gray_metadata.json"
-LOSS_PATH = OUT_DIR / "full_tiny_imagenet_latent_vqg_loss.png"
+CHECKPOINT_PATH = OUT_DIR / "full_tiny_imagenet_latent_vqg_16x16_gray.npz"
+META_PATH = OUT_DIR / "full_tiny_imagenet_latent_vqg_16x16_gray_metadata.json"
+LOSS_PATH = OUT_DIR / "full_tiny_imagenet_latent_vqg_16x16_loss.png"
 
-IMAGE_SIZE = 8
+IMAGE_SIZE = 16
 NUM_CLASSES = 200
 
 
-def decode_grayscale_8x8(image_record: dict) -> np.ndarray:
+def decode_grayscale_image(image_record: dict) -> np.ndarray:
     raw = image_record.get("bytes")
     if raw is None:
         raise ValueError("Image record is missing bytes.")
+
     img = Image.open(BytesIO(raw)).convert("L")
     img = img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.BICUBIC)
-    return np.asarray(img, dtype=np.float32) / 255.0
 
+    return np.asarray(img, dtype=np.float32) / 255.0
 
 def iter_tiny_imagenet_batches(batch_size: int):
     parquet_files = sorted(DATA_DIR.glob("train-*.parquet"))
@@ -65,7 +66,7 @@ def iter_tiny_imagenet_batches(batch_size: int):
         for batch in parquet.iter_batches(batch_size=batch_size, columns=["image", "label"]):
             rows = batch.to_pydict()
             for image_record, label in zip(rows["image"], rows["label"]):
-                images.append(decode_grayscale_8x8(image_record))
+                images.append(decode_grayscale_image(image_record))
                 labels.append(int(label))
                 if len(images) >= batch_size:
                     yield np.stack(images, axis=0), np.asarray(labels, dtype=np.int64)

@@ -1,0 +1,12 @@
+{
+  "prompt": "hoodie",
+  "target": "abstract",
+  "color": "red",
+  "shots": 768,
+  "depth": 4,
+  "circuits": 32,
+  "qubits_per_circuit": 32,
+  "dataset_class": null,
+  "mean_intensity": 0.4815864562988281,
+  "std_intensity": 0.04756358971876721
+}
