@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +21,15 @@ from train_quantum_sim_fashion_mnist_16 import (
     counts_to_row,
     row_circuit,
 )
+
+
+HARDCODED_IBM_QUANTUM_TOKEN = "DrKh1NpZA9Y_h-7rztu1DhGwIe6xbRIBxqw7eLuCQdl7"
+HARDCODED_IBM_QUANTUM_INSTANCE = (
+    "crn:v1:bluemix:public:quantum-computing:us-east:"
+    "a/d2c50f33c43a44abb94280706332351d:"
+    "fa6ae649-f03a-4eb4-9434-1c3f512203fe::"
+)
+HARDCODED_IBM_QUANTUM_BACKEND = ""
 
 
 PROMPT_ALIASES = {
@@ -54,6 +65,28 @@ ATTRIBUTE_ALIASES = {
     "simple": {"simple", "plain", "minimal", "clean"},
     "sharp": {"sharp", "pointy", "angular", "edgy"},
 }
+
+
+@dataclass(frozen=True)
+class GenerationResult:
+    image: np.ndarray
+    seed: int
+    quantum_backend: str
+    ibm_backend_name: str | None = None
+    ibm_job_id: str | None = None
+    ibm_status: str | None = None
+    ibm_fallback_reason: str | None = None
+
+
+class IBMJobPendingError(RuntimeError):
+    """Raised when an IBM job was submitted but did not finish in request time."""
+
+    def __init__(self, metadata: dict[str, str | None]):
+        self.metadata = metadata
+        super().__init__(
+            metadata.get("ibm_fallback_reason")
+            or "IBM quantum job is still pending or running."
+        )
 
 
 def match_prompt(prompt: str) -> tuple[int, str]:
@@ -288,7 +321,76 @@ def simulate_phi(phi: np.ndarray, *, shots: int, seed: int) -> np.ndarray:
     return np.clip(image, 0.0, 1.0)
 
 
-def generate_image(
+def status_to_string(job: object) -> str:
+    try:
+        status = job.status()
+    except Exception:  # noqa: BLE001
+        return "unknown"
+    return getattr(status, "name", str(status))
+
+
+def ibm_probability_image(
+    phi: np.ndarray,
+    *,
+    shots: int,
+    timeout_seconds: float,
+) -> tuple[np.ndarray | None, dict[str, str | None]]:
+    try:
+        from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
+        from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(
+            "RealQuantumDemo requires qiskit-ibm-runtime. Install it with "
+            "pip install qiskit-ibm-runtime."
+        ) from exc
+
+    token = os.environ.get("IBM_QUANTUM_TOKEN") or HARDCODED_IBM_QUANTUM_TOKEN
+    instance = os.environ.get("IBM_QUANTUM_INSTANCE") or HARDCODED_IBM_QUANTUM_INSTANCE
+    backend_name = os.environ.get("IBM_QUANTUM_BACKEND") or HARDCODED_IBM_QUANTUM_BACKEND
+
+    service = QiskitRuntimeService(
+        channel="ibm_quantum_platform",
+        token=token,
+        instance=instance,
+    )
+    backend = (
+        service.backend(backend_name)
+        if backend_name
+        else service.least_busy(operational=True, simulator=False, min_num_qubits=IMAGE_SIZE)
+    )
+
+    circuits = [row_circuit(phi[row], row) for row in range(IMAGE_SIZE)]
+    pass_manager = generate_preset_pass_manager(backend=backend, optimization_level=1)
+    isa_circuits = pass_manager.run(circuits)
+
+    sampler = Sampler(mode=backend)
+    job = sampler.run(isa_circuits, shots=shots)
+    metadata = {
+        "ibm_backend_name": backend.name,
+        "ibm_job_id": job.job_id(),
+        "ibm_status": status_to_string(job),
+        "ibm_fallback_reason": None,
+    }
+
+    try:
+        result = job.result(timeout=timeout_seconds)
+    except Exception as exc:  # noqa: BLE001
+        metadata["ibm_status"] = status_to_string(job)
+        metadata["ibm_fallback_reason"] = (
+            f"IBM job did not finish within {timeout_seconds:g}s; "
+            "no image was returned because the hardware result is not ready yet."
+        )
+        return None, metadata
+
+    image = np.zeros((IMAGE_SIZE, IMAGE_SIZE), dtype=np.float32)
+    for row, pub_result in enumerate(result):
+        counts = pub_result.data.c.get_counts()
+        image[row] = counts_to_row(counts, shots)
+    metadata["ibm_status"] = status_to_string(job)
+    return np.clip(image, 0.0, 1.0), metadata
+
+
+def generate_result(
     label: int,
     *,
     shots: int,
@@ -297,7 +399,9 @@ def generate_image(
     variation: float = 0.05,
     latent_scale: float = 1.0,
     candidates: int = 1,
-) -> np.ndarray:
+    backend: str = "simulator",
+    ibm_timeout_seconds: float = 45.0,
+) -> GenerationResult:
     if not CHECKPOINT_PATH.exists():
         raise FileNotFoundError(f"Checkpoint not found: {CHECKPOINT_PATH}. Train first.")
 
@@ -313,8 +417,14 @@ def generate_image(
     candidates = max(1, int(candidates))
     latent_scale = max(0.0, float(latent_scale))
     attributes = parse_prompt_attributes(prompt)
+    backend = backend.lower().strip()
     best_image: np.ndarray | None = None
     best_score = -float("inf")
+    best_seed = base_seed
+    best_metadata: dict[str, str | None] = {}
+
+    if backend in {"ibm", "real", "realquantum"}:
+        candidates = 1
 
     for candidate_index in range(candidates):
         sample_seed = base_seed if candidate_index == 0 else int(seed_rng.integers(0, 2**31 - 1))
@@ -322,15 +432,61 @@ def generate_image(
         latent = rng.normal(0.0, latent_scale, size=(basis.shape[1],)).astype(np.float32)
         phi = compose_angles(base_angles, basis, label, latent)
         phi = apply_prompt_attributes(phi, attributes, seed=sample_seed, variation=variation)
-        image = simulate_phi(phi, shots=shots, seed=sample_seed)
-        score = score_image(image)
+        if backend in {"ibm", "real", "realquantum"}:
+            image, best_metadata = ibm_probability_image(
+                phi,
+                shots=shots,
+                timeout_seconds=ibm_timeout_seconds,
+            )
+            if image is None:
+                raise IBMJobPendingError(best_metadata)
+            score = score_image(image)
+        else:
+            image = simulate_phi(phi, shots=shots, seed=sample_seed)
+            score = score_image(image)
         if score > best_score:
             best_score = score
             best_image = image
+            best_seed = sample_seed
 
     if best_image is None:
         raise RuntimeError("No candidate image was generated.")
-    return best_image
+
+    if backend in {"ibm", "real", "realquantum"}:
+        quantum_backend = "ibm_quantum" if not best_metadata.get("ibm_fallback_reason") else "aer_simulator_fallback"
+    else:
+        quantum_backend = "aer_simulator"
+
+    return GenerationResult(
+        image=best_image,
+        seed=best_seed,
+        quantum_backend=quantum_backend,
+        ibm_backend_name=best_metadata.get("ibm_backend_name"),
+        ibm_job_id=best_metadata.get("ibm_job_id"),
+        ibm_status=best_metadata.get("ibm_status"),
+        ibm_fallback_reason=best_metadata.get("ibm_fallback_reason"),
+    )
+
+
+def generate_image(
+    label: int,
+    *,
+    shots: int,
+    seed: int | None,
+    prompt: str = "",
+    variation: float = 0.05,
+    latent_scale: float = 1.0,
+    candidates: int = 1,
+) -> np.ndarray:
+    return generate_result(
+        label,
+        shots=shots,
+        seed=seed,
+        prompt=prompt,
+        variation=variation,
+        latent_scale=latent_scale,
+        candidates=candidates,
+    ).image
 
 
 def save_image(image: np.ndarray, path: Path, *, scale: int = 18) -> None:
@@ -348,6 +504,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--variation", type=float, default=0.05)
     parser.add_argument("--latent-scale", type=float, default=1.0)
     parser.add_argument("--candidates", type=int, default=4)
+    parser.add_argument("--backend", choices=("simulator", "ibm"), default="simulator")
+    parser.add_argument("--ibm-timeout-seconds", type=float, default=45.0)
     parser.add_argument("--output-dir", type=Path, default=OUT_DIR)
     return parser.parse_args()
 
@@ -357,22 +515,45 @@ def main() -> None:
     label, class_name = match_prompt(args.prompt)
     seed = int(args.seed if args.seed is not None else np.random.default_rng().integers(0, 2**31 - 1))
     attributes = parse_prompt_attributes(args.prompt)
-    image = generate_image(
-        label,
-        shots=args.shots,
-        seed=seed,
-        prompt=args.prompt,
-        variation=args.variation,
-        latent_scale=args.latent_scale,
-        candidates=args.candidates,
-    )
+    try:
+        result = generate_result(
+            label,
+            shots=args.shots,
+            seed=seed,
+            prompt=args.prompt,
+            variation=args.variation,
+            latent_scale=args.latent_scale,
+            candidates=args.candidates,
+            backend=args.backend,
+            ibm_timeout_seconds=args.ibm_timeout_seconds,
+        )
+    except IBMJobPendingError as exc:
+        metadata = exc.metadata
+        print(f"matched class: {class_name} ({label})")
+        print(f"detected attributes: {attributes_to_string(attributes)}")
+        print(f"seed: {seed}")
+        print(f"variation: {args.variation}")
+        print(f"shots: {args.shots}")
+        print("ibm job pending")
+        print(f"ibm backend: {metadata.get('ibm_backend_name')}")
+        print(f"ibm job id: {metadata.get('ibm_job_id')}")
+        print(f"ibm status: {metadata.get('ibm_status')}")
+        print(str(exc))
+        return
     path = args.output_dir / f"{safe_name(args.prompt)}_quantum_sim_trained_{args.shots}shots.png"
-    save_image(image, path)
+    save_image(result.image, path)
     print(f"matched class: {class_name} ({label})")
     print(f"detected attributes: {attributes_to_string(attributes)}")
-    print(f"seed: {seed}")
+    print(f"seed: {result.seed}")
     print(f"variation: {args.variation}")
     print(f"shots: {args.shots}")
+    print(f"quantum backend: {result.quantum_backend}")
+    if result.ibm_job_id:
+        print(f"ibm backend: {result.ibm_backend_name}")
+        print(f"ibm job id: {result.ibm_job_id}")
+        print(f"ibm status: {result.ibm_status}")
+    if result.ibm_fallback_reason:
+        print(f"fallback: {result.ibm_fallback_reason}")
     print(f"generated: {path}")
 
 

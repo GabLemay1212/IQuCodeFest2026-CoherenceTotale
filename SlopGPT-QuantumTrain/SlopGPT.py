@@ -26,8 +26,9 @@ from flask_cors import CORS
 
 from generate_quantum_sim_sample import (
     CHECKPOINT_PATH,
+    IBMJobPendingError,
     attributes_to_string,
-    generate_image,
+    generate_result,
     match_prompt,
     parse_prompt_attributes,
     safe_name,
@@ -39,10 +40,30 @@ THIS_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = THIS_DIR / "outputs" / "ui"
 
 MODE_CONFIGS = {
-    "fast": {"shots": 64, "candidates": 1, "latent_scale": 0.7},
-    "balanced": {"shots": 128, "candidates": 4, "latent_scale": 1.0},
-    "deepthinking": {"shots": 256, "candidates": 12, "latent_scale": 1.4},
-    "realquantumdemo": {"shots": 256, "candidates": 12, "latent_scale": 1.4},
+    "fast": {"shots": 64, "candidates": 1, "latent_scale": 0.7, "backend": "simulator"},
+    "balanced": {"shots": 128, "candidates": 4, "latent_scale": 1.0, "backend": "simulator"},
+    "deepthinking": {"shots": 256, "candidates": 12, "latent_scale": 1.4, "backend": "simulator"},
+    "ibmfast": {
+        "shots": 256,
+        "candidates": 1,
+        "latent_scale": 0.7,
+        "backend": "ibm",
+        "ibm_timeout_seconds": 45,
+    },
+    "ibmbalanced": {
+        "shots": 512,
+        "candidates": 1,
+        "latent_scale": 1.0,
+        "backend": "ibm",
+        "ibm_timeout_seconds": 45,
+    },
+    "ibmdeepthinking": {
+        "shots": 1024,
+        "candidates": 1,
+        "latent_scale": 1.4,
+        "backend": "ibm",
+        "ibm_timeout_seconds": 45,
+    },
 }
 DEFAULT_MODE = "balanced"
 SUPPORTED_PROMPTS = (
@@ -77,6 +98,11 @@ CORS(
                 "X-Seed",
                 "X-Variation",
                 "X-Detected-Attributes",
+                "X-Quantum-Backend",
+                "X-Ibm-Backend",
+                "X-Ibm-Job-Id",
+                "X-Ibm-Status",
+                "X-Ibm-Fallback-Reason",
                 "X-Output-Path",
             ],
         }
@@ -136,8 +162,10 @@ def generate_prompt_image(
     shots = int(config["shots"])
     candidates = int(config["candidates"])
     latent_scale = float(config["latent_scale"])
+    backend = "ibm" if str(config.get("backend", "simulator")) == "ibm" else "simulator"
+    ibm_timeout_seconds = float(config.get("ibm_timeout_seconds", 45))
     attributes = parse_prompt_attributes(prompt)
-    image = generate_image(
+    result = generate_result(
         label,
         shots=shots,
         seed=seed,
@@ -145,24 +173,31 @@ def generate_prompt_image(
         variation=variation,
         latent_scale=latent_scale,
         candidates=candidates,
+        backend=backend,
+        ibm_timeout_seconds=ibm_timeout_seconds,
     )
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_path = (
         OUTPUT_DIR
         / f"{safe_name(prompt)}_{mode_name}_quantum_sim_trained_{shots}shots.png"
     )
-    save_image(image, output_path)
+    save_image(result.image, output_path)
     return GeneratedImage(
         path=output_path,
         metadata={
             "matched_class": class_name,
             "class_id": label,
             "shots": shots,
-            "seed": seed,
+            "seed": result.seed,
             "variation": variation,
             "detected_attributes": attributes_to_string(attributes),
             "candidates": candidates,
             "latent_scale": latent_scale,
+            "quantum_backend": result.quantum_backend,
+            "ibm_backend": result.ibm_backend_name,
+            "ibm_job_id": result.ibm_job_id,
+            "ibm_status": result.ibm_status,
+            "ibm_fallback_reason": result.ibm_fallback_reason,
         },
     )
 
@@ -211,6 +246,19 @@ def generate():
     try:
         generated = generate_prompt_image(prompt, mode, seed=seed, variation=variation)
         return send_png(generated)
+    except IBMJobPendingError as exc:
+        metadata = exc.metadata
+        return jsonify(
+            {
+                "error": "ibm_job_pending",
+                "message": str(exc),
+                "prompt": prompt,
+                "mode": mode,
+                "ibm_backend": metadata.get("ibm_backend_name"),
+                "ibm_job_id": metadata.get("ibm_job_id"),
+                "ibm_status": metadata.get("ibm_status"),
+            }
+        ), 202
     except UnsupportedPromptError as exc:
         return jsonify(
             {

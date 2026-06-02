@@ -85,6 +85,40 @@ python SlopGPT-QuantumTrain/SlopGPT.py
 Then open `slopgpt.html` like before. This backend uses only the simulator-trained
 checkpoint from `SlopGPT-QuantumTrain/outputs/`.
 
+The IBM modes submit one 16-row image job to IBM Quantum. If the IBM job stays
+pending/running longer than the configured timeout, the server returns a JSON
+`202 Accepted` response with the IBM job id/status instead of pretending a
+simulator fallback image came from hardware. Completed hardware jobs return PNGs
+with these headers:
+
+```text
+X-Quantum-Backend
+X-Ibm-Backend
+X-Ibm-Job-Id
+X-Ibm-Status
+```
+
+This fixes the confusing case where a queued IBM job takes longer than the HTTP
+request timeout and the UI would otherwise show a simulator image too early.
+
+IBM UI modes:
+
+```text
+IBM Fast         256 shots
+IBM Balanced     512 shots
+IBM DeepThinking 1024 shots
+```
+
+The IBM modes use one candidate only, because running candidate search on real
+hardware would submit multiple jobs and make pending time much worse. The local
+Fast/Balanced/DeepThinking modes still use the Aer simulator.
+
+Command-line IBM demo:
+
+```powershell
+python SlopGPT-QuantumTrain/generate_quantum_sim_sample.py sneaker --shots 512 --backend ibm --ibm-timeout-seconds 45
+```
+
 Outputs are saved in:
 
 ```text
