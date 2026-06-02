@@ -678,10 +678,10 @@
         <h1 class="empty-title">Comment puis-je vous aider ?</h1>
         <p class="empty-sub">Envoyez une requête à votre application Python locale sur le port 8080. Elle retournera une image en réponse.</p>
         <div class="suggestions">
-          <button class="suggestion" onclick="fillAndSend('Un chat astronaute flottant dans une nébuleuse colorée')">🚀 Chat astronaute dans l'espace</button>
-          <button class="suggestion" onclick="fillAndSend('Une forêt enchantée au coucher du soleil, style aquarelle')">🌲 Forêt enchantée à l'aquarelle</button>
-          <button class="suggestion" onclick="fillAndSend('Une ville cyberpunk sous la pluie, néons reflétés')">🌃 Ville cyberpunk sous la pluie</button>
-          <button class="suggestion" onclick="fillAndSend('Un café cosy parisien en hiver, ambiance chaleureuse')">☕ Café parisien en hiver</button>
+          <button class="suggestion" onclick="fillAndSend('Tiny bag')">Tiny bag</button>
+          <button class="suggestion" onclick="fillAndSend('Tall boot')">Tall boot</button>
+          <button class="suggestion" onclick="fillAndSend('Large coat')">Large coat</button>
+          <button class="suggestion" onclick="fillAndSend('Sharp dress')">Sharp dress</button>
         </div>
       </div>
 
@@ -898,10 +898,10 @@
       <h1 class="empty-title">Comment puis-je vous aider ?</h1>
       <p class="empty-sub">Envoyez une requête à votre application Python locale sur le port 8080. Elle retournera une image en réponse.</p>
       <div class="suggestions">
-        <button class="suggestion" onclick="fillAndSend('Un chat astronaute flottant dans une nébuleuse colorée')">🚀 Chat astronaute dans l'espace</button>
-        <button class="suggestion" onclick="fillAndSend('Une forêt enchantée au coucher du soleil, style aquarelle')">🌲 Forêt enchantée à l'aquarelle</button>
-        <button class="suggestion" onclick="fillAndSend('Une ville cyberpunk sous la pluie, néons reflétés')">🌃 Ville cyberpunk sous la pluie</button>
-        <button class="suggestion" onclick="fillAndSend('Un café cosy parisien en hiver, ambiance chaleureuse')">☕ Café parisien en hiver</button>
+        <button class="suggestion" onclick="fillAndSend('Tiny bag')">Tiny bag</button>
+        <button class="suggestion" onclick="fillAndSend('Tall boot')">Tall boot</button>
+        <button class="suggestion" onclick="fillAndSend('Large coat')">Large coat</button>
+        <button class="suggestion" onclick="fillAndSend('Sharp dress')">Sharp dress</button>
       </div>`;
     wrapper.appendChild(es);
   }
@@ -1086,7 +1086,7 @@
     } catch (err) {
       let msg = err.message;
       if (err.name === 'TimeoutError') msg = 'Délai dépassé — le serveur met trop de temps à répondre.';
-      else if (err.name === 'TypeError' && msg.includes('fetch')) msg = 'Impossible de contacter localhost:8080. Vérifiez que votre application Python est lancée et que les headers CORS sont activés.';
+      else if (err.name === 'TypeError' && msg.includes('fetch')) msg = 'Impossible de contacter localhost:8080. Vérifiez que votre application Python est lancée';
       replaceThinkingWithError(thinkingEl, msg);
       setStatus('error', 'Erreur — ' + msg.substring(0, 60));
     } finally {
