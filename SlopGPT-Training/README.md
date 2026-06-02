@@ -83,11 +83,31 @@ UI generation modes:
 Fast         128 shots, 1 candidate,   latent scale 0.7
 Balanced     512 shots, 2 candidates,  latent scale 1.0
 DeepThinking 1024 shots, 24 candidates, latent scale 1.7
+RealQuantumDemo 128 shots, 1 candidate, latent scale 1.0, IBM hardware
 ```
 
 Shots reduce quantum measurement noise. Candidates and latent scale create the
 visible differences between repeated generations. DeepThinking intentionally
 does more work and should take several seconds before the chat receives the PNG.
+
+RealQuantumDemo submits the 16 row circuits for one 16x16 image to IBM Quantum
+hardware. Training still runs locally. Install the runtime package first:
+
+```bash
+pip install qiskit-ibm-runtime
+```
+
+Then set these environment variables before starting the Flask backend:
+
+```powershell
+$env:IBM_QUANTUM_TOKEN="your_ibm_quantum_token"
+$env:IBM_QUANTUM_INSTANCE="your_instance_crn"
+$env:IBM_QUANTUM_BACKEND="optional_backend_name"
+python SlopGPT-Training/SlopGPT.py
+```
+
+`IBM_QUANTUM_BACKEND` is optional. If omitted, the runtime service tries to pick
+a least-busy real backend with at least 16 qubits.
 
 ## Export The 200 Promptable Classes
 

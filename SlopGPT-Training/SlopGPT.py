@@ -522,7 +522,7 @@ def generate_prompt_image(
     shots = int(mode_config["shots"])
     latent_scale = float(mode_config["latent_scale"])
     candidates = int(mode_config["candidates"])
-    backend = str(mode_config.get("backend", "simulator"))
+    backend = "ibm" if mode_name == "realquantumdemo" else "simulator"
 
     if match_fashion_mnist_prompt is None:
         raise RuntimeError(

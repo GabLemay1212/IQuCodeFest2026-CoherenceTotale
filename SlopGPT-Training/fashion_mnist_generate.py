@@ -25,6 +25,15 @@ from train_fashion_mnist_quantum_16 import (
 )
 
 
+HARDCODED_IBM_QUANTUM_TOKEN = "DrKh1NpZA9Y_h-7rztu1DhGwIe6xbRIBxqw7eLuCQdl7"
+HARDCODED_IBM_QUANTUM_INSTANCE = (
+    "crn:v1:bluemix:public:quantum-computing:us-east:"
+    "a/d2c50f33c43a44abb94280706332351d:"
+    "fa6ae649-f03a-4eb4-9434-1c3f512203fe::"
+)
+HARDCODED_IBM_QUANTUM_BACKEND = ""
+
+
 PROMPT_ALIASES = {
     "t-shirt": 0,
     "tshirt": 0,
@@ -149,9 +158,9 @@ def _ibm_probability_image(
             "pip install qiskit-ibm-runtime."
         ) from exc
 
-    token = os.environ.get("IBM_QUANTUM_TOKEN")
-    instance = os.environ.get("IBM_QUANTUM_INSTANCE")
-    backend_name = os.environ.get("IBM_QUANTUM_BACKEND")
+    token = os.environ.get("IBM_QUANTUM_TOKEN") or HARDCODED_IBM_QUANTUM_TOKEN
+    instance = os.environ.get("IBM_QUANTUM_INSTANCE") or HARDCODED_IBM_QUANTUM_INSTANCE
+    backend_name = os.environ.get("IBM_QUANTUM_BACKEND") or HARDCODED_IBM_QUANTUM_BACKEND
 
     if not token:
         raise RuntimeError("Set IBM_QUANTUM_TOKEN before using RealQuantumDemo.")

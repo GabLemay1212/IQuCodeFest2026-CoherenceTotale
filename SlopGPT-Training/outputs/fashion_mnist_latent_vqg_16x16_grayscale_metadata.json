@@ -20,10 +20,10 @@
   ],
   "latent_dim": 16,
   "learning_rate": 0.35,
-  "batch_size": 128,
-  "epochs": 1,
-  "step": 100,
-  "latest_loss": 0.0474918968975544,
+  "batch_size": 256,
+  "epochs": 1000,
+  "step": 54400,
+  "latest_loss": 0.03929568827152252,
   "train_images": "C:\\Personal Files\\Universite\\Quantum\\IQuCodeFest2026-CoherenceTotale\\Fashion-MNIST\\train-images-idx3-ubyte.gz",
   "train_labels": "C:\\Personal Files\\Universite\\Quantum\\IQuCodeFest2026-CoherenceTotale\\Fashion-MNIST\\train-labels-idx1-ubyte.gz"
 }
