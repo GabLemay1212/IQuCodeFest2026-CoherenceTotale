@@ -1,3 +1,0 @@
-python quantum_image.py --mode downscale --input in.jpg --output out.png --block 2
-
-python quantum_image.py --mode upscale --input out.png --output out2.png --scale 2 --num-colors 32
