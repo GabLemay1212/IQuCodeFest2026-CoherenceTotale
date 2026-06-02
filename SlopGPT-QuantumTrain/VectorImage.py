@@ -99,34 +99,39 @@ def parse_multi_prompt(raw: str):
         if not part:
             continue
         tokens = part.split()
-        # Optional leading count — digit ("2") or English word ("two")
+        # Scan the entire phrase for a count, not just the first word.
         _WORD_NUMS = {
             "one":1,"two":2,"three":3,"four":4,"five":5,
             "six":6,"seven":7,"eight":8,"nine":9,"ten":10,
             "a":1,"an":1,"the":1,
         }
         count = 1
-        if tokens and tokens[0].isdigit():
-            count = max(1, min(20, int(tokens[0])))
-            tokens = tokens[1:]
-        elif tokens and tokens[0] in _WORD_NUMS:
-            count = _WORD_NUMS[tokens[0]]
-            tokens = tokens[1:]
+        for i, tok in enumerate(tokens):
+            if tok.isdigit():
+                count = max(1, min(20, int(tok)))
+                tokens.pop(i)
+                break
+            elif tok in _WORD_NUMS:
+                count = _WORD_NUMS[tok]
+                tokens.pop(i)
+                break
         # Find shape
         shape = None
         for tok in tokens:
-            if tok in SHAPE_MAP:
-                shape = tok; break
-            if tok in SHAPE_ALIASES:
-                shape = SHAPE_ALIASES[tok]; break
+            clean_tok = tok.rstrip('s')
+            if clean_tok in SHAPE_MAP:
+                shape = clean_tok; break
+            if clean_tok in SHAPE_ALIASES:
+                shape = SHAPE_ALIASES[clean_tok]; break
         if shape is None:
             print(f"  [warning] No recognized shape in '{part.strip()}', skipping.", flush=True)
             continue
         # Find color
         color = None
         for tok in tokens:
-            if tok in NAMED_COLORS:
-                color = NAMED_COLORS[tok]; break
+            clean_tok = tok.rstrip('s')
+            if clean_tok in NAMED_COLORS:
+                color = NAMED_COLORS[clean_tok]; break
         if color is None:
             color = SHAPE_PRIORS[shape].color
         results.append((count, shape, color))
