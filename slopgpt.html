@@ -491,7 +491,11 @@
     padding: 6px 10px 10px;
   }
 
-  .input-tools { display: flex; gap: 2px; }
+  .input-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 
   .mode-select {
     border: 1px solid var(--border-md);
@@ -502,6 +506,10 @@
     padding: 6px 9px;
     outline: none;
     cursor: pointer;
+  }
+
+  .item-count {
+    width: 78px;
   }
 
   .mode-select:focus {
@@ -734,6 +742,20 @@
       ></textarea>
       <div class="input-toolbar">
         <div class="input-tools">
+          <select id="model-choice" class="mode-select" title="Model">
+            <option value="fashion" selected>Model 1 - Fashion pixels</option>
+            <option value="vector">Model 2 - Vector shapes</option>
+          </select>
+          <input
+            id="item-count"
+            class="mode-select item-count"
+            type="number"
+            min="1"
+            max="20"
+            value="1"
+            title="Number of vector items"
+            aria-label="Number of vector items"
+          />
           <select id="shot-mode" class="mode-select" title="Quantum sampling mode">
             <option value="fast">Fast - 128 shots</option>
             <option value="balanced" selected>Balanced - 512 shots</option>
@@ -767,6 +789,8 @@
   const messagesEl = document.getElementById('messages');
   const inputEl = document.getElementById('prompt-input');
   const sendBtn = document.getElementById('send-btn');
+  const modelEl = document.getElementById('model-choice');
+  const itemCountEl = document.getElementById('item-count');
   const modeEl = document.getElementById('shot-mode');
   const statusDot = document.getElementById('status-dot');
   const statusText = document.getElementById('status-text');
@@ -1071,6 +1095,8 @@
   async function sendMessage() {
     const prompt = inputEl.value.trim();
     if (!prompt || isLoading) return;
+    const model = modelEl.value;
+    const itemCount = Math.max(1, Math.min(20, parseInt(itemCountEl.value || '1', 10) || 1));
     const mode = modeEl.value;
 
     if (!getActive()) newChat();
@@ -1096,7 +1122,7 @@
       const response = await fetch(`${API_URL}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt, mode: mode }),
+        body: JSON.stringify({ prompt: prompt, mode: mode, model: model, item_count: itemCount }),
         signal: AbortSignal.timeout(240000)
       });
 

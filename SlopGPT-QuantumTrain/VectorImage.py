@@ -478,6 +478,76 @@ def save_multi_svg(shape_instances, canvas_size, path):
     print(f"  SVG → {path}  (infinite resolution)", flush=True)
 
 
+def generate_vector_svg(
+    prompt: str,
+    output_dir: str | os.PathLike,
+    *,
+    seed: int | None = None,
+    steps: int = 80,
+    n_samples: int = 1,
+    item_count: int | None = None,
+) -> str:
+    """Generate a vector SVG from a prompt without using stdin.
+
+    This is the UI-friendly entry point. It keeps the original VectorImage
+    model path, but lets the Flask server call it directly.
+    """
+    raw = prompt.strip() or "blue circle"
+    shape_specs = parse_multi_prompt(raw)
+    if item_count is not None:
+        total = max(1, min(20, int(item_count)))
+        expanded = []
+        for count, shape, color in shape_specs:
+            expanded.extend((shape, color) for _ in range(count))
+        if not expanded:
+            expanded = [("circle", NAMED_COLORS["blue"])]
+        adjusted = []
+        for index in range(total):
+            shape, color = expanded[index % len(expanded)]
+            adjusted.append((1, shape, color))
+        shape_specs = adjusted
+    run_seed = int(seed if seed is not None else time.time_ns() % (2**32))
+    torch.manual_seed(run_seed)
+    np.random.seed(run_seed)
+
+    output_dir = os.fspath(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    raster = ShapeRasterizer(IMG_SIZE).to(device)
+
+    unique_keys = list(dict.fromkeys((shape, color) for _, shape, color in shape_specs))
+    trained_models: dict = {}
+    for shape, color in unique_keys:
+        prior = SHAPE_PRIORS[shape]
+        loss_fn = ShapeLoss(prior, color).to(device)
+        model = QuantumVectorModel(shape, color, N_QUBITS, N_LAYERS).to(device)
+        train_model(model, raster, loss_fn, steps=max(1, int(steps)))
+        trained_models[(shape, color)] = model
+
+    generated_path = ""
+    safe_prompt = re.sub(r"[^a-zA-Z0-9]+", "_", raw.lower()).strip("_") or "vector"
+    safe_prompt = safe_prompt[:48]
+    run_id = int(time.time())
+    for sample_idx in range(1, max(1, int(n_samples)) + 1):
+        torch.manual_seed((run_seed + sample_idx * 997) % (2**32))
+        instances = []
+        for count, shape, color in shape_specs:
+            model = trained_models[(shape, color)]
+            for _ in range(count):
+                with torch.no_grad():
+                    params, _ = model(1, SAMPLE_NOISE_SCALE)
+                instances.append((params.cpu().numpy()[0], shape))
+
+        instances = spread_instances(instances)
+        generated_path = os.path.join(
+            output_dir,
+            f"vector_{safe_prompt}_{run_id}_v{sample_idx:02d}.svg",
+        )
+        save_multi_svg(instances, IMG_SIZE, generated_path)
+
+    return generated_path
+
+
 def train_model(model, rasterizer, loss_fn, steps=400):
     opt = optim.Adam([
         {"params": model.quantum_encoder.parameters(), "lr": 0.02},
