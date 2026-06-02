@@ -17,7 +17,7 @@ Fashion-MNIST image
 ## Smoke Test
 
 ```powershell
-python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 1 --samples-per-class 1 --shots 64 --max-steps 10 --optimizer spsa --init class-average --data-dir "C:\Personal Files\Universite\Quantum\IQuCodeFest2026-CoherenceTotale\Fashion-MNIST" --reset
+python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 1 --samples-per-class 1 --shots 64 --max-steps 10 --optimizer spsa --init class-average --data-dir Datasets/Fashion-MNIST --reset
 ```
 
 This trains on only 10 images total, one per class.
@@ -25,7 +25,7 @@ This trains on only 10 images total, one per class.
 ## Slightly Longer Demo
 
 ```powershell
-python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 2 --samples-per-class 2 --shots 128 --max-steps 40 --optimizer spsa --init class-average --data-dir "C:\Personal Files\Universite\Quantum\IQuCodeFest2026-CoherenceTotale\Fashion-MNIST" --reset
+python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 2 --samples-per-class 2 --shots 128 --max-steps 40 --optimizer spsa --init class-average --data-dir Datasets/Fashion-MNIST --reset
 ```
 
 ## Bigger Quantum-Training Demo
@@ -33,13 +33,13 @@ python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 2 --s
 This is the command for 5 epochs, 256 shots, and 20 images per class:
 
 ```powershell
-python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 5 --samples-per-class 20 --shots 256 --optimizer spsa --init class-average --latent-dim 4 --latent-scale 1.0 --basis-init-scale 0.04 --basis-lr-scale 0.35 --basis-clip 0.45 --augment-shift 1 --augment-noise 0.02 --learning-rate 0.25 --spsa-c 0.08 --log-every 20 --max-steps 0 --data-dir "C:\Personal Files\Universite\Quantum\IQuCodeFest2026-CoherenceTotale\Fashion-MNIST" --reset
+python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 5 --samples-per-class 20 --shots 256 --optimizer spsa --init class-average --latent-dim 4 --latent-scale 1.0 --basis-init-scale 0.04 --basis-lr-scale 0.35 --basis-clip 0.45 --augment-shift 1 --augment-noise 0.02 --learning-rate 0.25 --spsa-c 0.08 --log-every 20 --max-steps 0 --data-dir Datasets/Fashion-MNIST --reset
 ```
 
 ## Resume
 
 ```powershell
-python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 5 --samples-per-class 20 --shots 256 --optimizer spsa --latent-dim 4 --latent-scale 1.0 --basis-lr-scale 0.35 --basis-clip 0.45 --augment-shift 1 --augment-noise 0.02 --learning-rate 0.25 --spsa-c 0.08 --log-every 20 --max-steps 0 --resume --data-dir "C:\Personal Files\Universite\Quantum\IQuCodeFest2026-CoherenceTotale\Fashion-MNIST"
+python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py --epochs 5 --samples-per-class 20 --shots 256 --optimizer spsa --latent-dim 4 --latent-scale 1.0 --basis-lr-scale 0.35 --basis-clip 0.45 --augment-shift 1 --augment-noise 0.02 --learning-rate 0.25 --spsa-c 0.08 --log-every 20 --max-steps 0 --resume --data-dir Datasets/Fashion-MNIST
 ```
 
 ## Generate A Sample

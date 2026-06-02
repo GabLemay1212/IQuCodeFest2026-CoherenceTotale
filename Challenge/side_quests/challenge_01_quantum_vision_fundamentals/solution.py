@@ -12,8 +12,8 @@ import numpy as np
 from qiskit import QuantumCircuit
 import matplotlib.pyplot as plt
 
-import utils_images as img_utils
-import utils_quantum as q_utils
+import Challenge.side_quests.challenge_01_quantum_vision_fundamentals.utils_images as img_utils
+import Challenge.side_quests.challenge_01_quantum_vision_fundamentals.utils_quantum as q_utils
 
 
 # ---------------------------------------------------------------------------

@@ -33,7 +33,7 @@ from qiskit_aer import AerSimulator
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATA_DIR = ROOT / "Fashion-MNIST"
+DEFAULT_DATA_DIR = ROOT / "Datasets" / "Fashion-MNIST"
 OUT_DIR = Path(__file__).resolve().parent / "outputs"
 CHECKPOINT_PATH = OUT_DIR / "quantum_sim_fashion_mnist_16x16_angles.npz"
 META_PATH = OUT_DIR / "quantum_sim_fashion_mnist_16x16_angles_metadata.json"

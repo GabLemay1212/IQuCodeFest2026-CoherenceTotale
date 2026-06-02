@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
 sys.path.insert(0, "./tmp/consignes/challenge_02_generative_quantum_art")
-from utils_quantum import run_simulation
+from Challenge.side_quests.challenge_02_generative_quantum_art.utils_quantum import run_simulation
 
 OUT = "./tmp/out"
 os.makedirs(OUT, exist_ok=True)

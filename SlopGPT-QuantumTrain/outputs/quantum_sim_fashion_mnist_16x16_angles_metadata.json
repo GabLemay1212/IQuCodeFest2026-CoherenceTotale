@@ -34,6 +34,6 @@
   "learning_rate": 0.25,
   "step": 1000,
   "latest_loss": 0.10109183937311172,
-  "train_images": "C:\\Personal Files\\Universite\\Quantum\\IQuCodeFest2026-CoherenceTotale\\Fashion-MNIST\\train-images-idx3-ubyte.gz",
-  "train_labels": "C:\\Personal Files\\Universite\\Quantum\\IQuCodeFest2026-CoherenceTotale\\Fashion-MNIST\\train-labels-idx1-ubyte.gz"
+  "train_images": "Datasets/Fashion-MNIST/train-images-idx3-ubyte.gz",
+  "train_labels": "Datasets/Fashion-MNIST/train-labels-idx1-ubyte.gz"
 }

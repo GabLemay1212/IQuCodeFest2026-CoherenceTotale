@@ -211,7 +211,7 @@ def generate_prompt_image(
             f"Checkpoint not found: {CHECKPOINT_PATH}. Train first with "
             "python SlopGPT-QuantumTrain/train_quantum_sim_fashion_mnist_16.py "
             "--epochs 1 --samples-per-class 1 --shots 64 --max-steps 10 "
-            "--data-dir \"C:\\Personal Files\\Universite\\Quantum\\IQuCodeFest2026-CoherenceTotale\\Fashion-MNIST\""
+            "--data-dir Datasets/Fashion-MNIST"
         )
 
     try:

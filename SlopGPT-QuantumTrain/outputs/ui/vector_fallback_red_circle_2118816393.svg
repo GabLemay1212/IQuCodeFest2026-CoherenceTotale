@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-<rect width="100%" height="100%" fill="white"/>
-<title>red circle</title>
-<circle cx="92.53" cy="228.74" r="51.93" fill="#ef4444" fill-opacity="0.819" stroke="#111827" stroke-width="5"/>
-<circle cx="198.83" cy="275.10" r="65.77" fill="#ef4444" fill-opacity="0.872" stroke="#111827" stroke-width="5"/>
-<circle cx="301.01" cy="224.59" r="84.95" fill="#ef4444" fill-opacity="0.898" stroke="#111827" stroke-width="5"/>
-<circle cx="389.55" cy="325.70" r="55.36" fill="#ef4444" fill-opacity="0.824" stroke="#111827" stroke-width="5"/>
-</svg>

@@ -23,13 +23,17 @@ from train_quantum_sim_fashion_mnist_16 import (
 )
 
 
-HARDCODED_IBM_QUANTUM_TOKEN = "DrKh1NpZA9Y_h-7rztu1DhGwIe6xbRIBxqw7eLuCQdl7"
-HARDCODED_IBM_QUANTUM_INSTANCE = (
-    "crn:v1:bluemix:public:quantum-computing:us-east:"
-    "a/d2c50f33c43a44abb94280706332351d:"
-    "fa6ae649-f03a-4eb4-9434-1c3f512203fe::"
+IBM_ENV_HELP = (
+    "Set IBM_QUANTUM_TOKEN and IBM_QUANTUM_INSTANCE in your environment. "
+    "Optionally set IBM_QUANTUM_BACKEND to choose a specific backend."
 )
-HARDCODED_IBM_QUANTUM_BACKEND = ""
+
+
+def required_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(f"Missing {name}. {IBM_ENV_HELP}")
+    return value
 
 
 PROMPT_ALIASES = {
@@ -344,9 +348,9 @@ def ibm_probability_image(
             "pip install qiskit-ibm-runtime."
         ) from exc
 
-    token = os.environ.get("IBM_QUANTUM_TOKEN") or HARDCODED_IBM_QUANTUM_TOKEN
-    instance = os.environ.get("IBM_QUANTUM_INSTANCE") or HARDCODED_IBM_QUANTUM_INSTANCE
-    backend_name = os.environ.get("IBM_QUANTUM_BACKEND") or HARDCODED_IBM_QUANTUM_BACKEND
+    token = required_env("IBM_QUANTUM_TOKEN")
+    instance = required_env("IBM_QUANTUM_INSTANCE")
+    backend_name = os.environ.get("IBM_QUANTUM_BACKEND", "").strip()
 
     service = QiskitRuntimeService(
         channel="ibm_quantum_platform",
@@ -559,5 +563,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 

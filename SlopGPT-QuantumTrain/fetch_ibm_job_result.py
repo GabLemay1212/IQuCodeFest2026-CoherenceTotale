@@ -10,10 +10,7 @@ import numpy as np
 from PIL import Image
 from qiskit_ibm_runtime import QiskitRuntimeService
 
-from generate_quantum_sim_sample import (
-    HARDCODED_IBM_QUANTUM_INSTANCE,
-    HARDCODED_IBM_QUANTUM_TOKEN,
-)
+from generate_quantum_sim_sample import required_env
 from train_quantum_sim_fashion_mnist_16 import IMAGE_SIZE, counts_to_row
 
 
@@ -40,8 +37,8 @@ def counts_shots(counts: dict[str, int]) -> int:
 
 
 def fetch_job_image(job_id: str, output_path: Path) -> Path | None:
-    token = os.environ.get("IBM_QUANTUM_TOKEN") or HARDCODED_IBM_QUANTUM_TOKEN
-    instance = os.environ.get("IBM_QUANTUM_INSTANCE") or HARDCODED_IBM_QUANTUM_INSTANCE
+    token = required_env("IBM_QUANTUM_TOKEN")
+    instance = required_env("IBM_QUANTUM_INSTANCE")
 
     service = QiskitRuntimeService(
         channel="ibm_quantum_platform",
@@ -88,5 +85,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 

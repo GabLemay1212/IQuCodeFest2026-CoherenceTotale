@@ -4,7 +4,7 @@
 # The notebook ('bloch_sphere_dojo.ipynb') includes explanations and exercises, ideal for interactive learning.
 # This Python file is provided for those who prefer working directly in a .py file instead of a notebook.
 
-from tutorials.bloch_sphere_dojo.utils import *
+from Challenge.tutorials.bloch_sphere_dojo.utils import *
 
 def student_example():
     initial_point = QUANTUM_STATES_Point3D["0"] # Point3D(0, 0, 1)
