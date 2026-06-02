@@ -495,30 +495,10 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.reset:
         args.resume = False
-    if args.samples_per_class < 1:
-        raise ValueError("--samples-per-class must be >= 1")
-    if args.shots < 1:
-        raise ValueError("--shots must be >= 1")
-    if args.latent_dim < 1:
-        raise ValueError("--latent-dim must be >= 1")
-    if args.latent_scale < 0:
-        raise ValueError("--latent-scale must be >= 0")
-    if args.basis_init_scale < 0:
-        raise ValueError("--basis-init-scale must be >= 0")
-    if args.basis_lr_scale < 0:
-        raise ValueError("--basis-lr-scale must be >= 0")
-    if args.basis_clip <= 0:
-        raise ValueError("--basis-clip must be > 0")
-    if args.augment_shift < 0:
-        raise ValueError("--augment-shift must be >= 0")
-    if args.augment_noise < 0:
-        raise ValueError("--augment-noise must be >= 0")
-    if args.init_noise < 0:
-        raise ValueError("--init-noise must be >= 0")
-    if args.spsa_c <= 0:
-        raise ValueError("--spsa-c must be > 0")
     return args
 
 
 if __name__ == "__main__":
     train(parse_args())
+
+    
